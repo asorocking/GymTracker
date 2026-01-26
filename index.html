@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="description" content="Полностью функциональное PWA на React" />
+    
+    <!-- PWA Meta -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hello PWA" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/25/25231.png" />
+
+    <title>Hello PWA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://esm.sh/react@^19.2.3/",
+          "react": "https://esm.sh/react@^19.2.3",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 overflow-hidden">
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Используем ./sw.js для относительного пути на GH Pages
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW зарегистрирован'))
+            .catch(err => console.log('Ошибка SW:', err));
+        });
+      }
+    </script>
+  </body>
+</html>
