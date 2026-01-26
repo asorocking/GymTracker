@@ -47,19 +47,46 @@
         margin: 0;
       }
 
-      /* Компактная высота записи */
       .tracker-item {
         height: 48px;
       }
       
       textarea {
-        resize: none;
+        resize: none !important;
         overflow: hidden;
-        line-height: 1.1;
+        line-height: 1.2;
+        appearance: none;
+        -webkit-appearance: none;
       }
 
-      .btn-move {
-        padding: 2px;
+      textarea::-webkit-resizer {
+        display: none;
+      }
+
+      .move-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 20px;
+        color: #cbd5e1;
+        transition: color 0.2s;
+      }
+      .move-btn:active:not(:disabled) {
+        color: #0f172a;
+      }
+      
+      .delete-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 40px;
+        color: #e2e8f0;
+        transition: color 0.2s;
+      }
+      .delete-btn:active {
+        color: #ef4444;
       }
     </style>
   </head>
@@ -80,42 +107,43 @@
         }, []);
 
         return (
-          <div className="bg-white border border-slate-200 rounded-lg px-2 py-1 flex items-center justify-between shadow-sm fade-in mb-1.5 tracker-item">
-            {/* Кнопки перемещения (вертикальный блок) */}
-            <div className="flex flex-col justify-center mr-1.5 shrink-0 h-full">
+          <div className="bg-white border border-slate-200 rounded-lg pl-1 pr-1 flex items-center justify-between shadow-sm fade-in mb-1.5 tracker-item">
+            
+            {/* Кнопки перемещения */}
+            <div className="flex flex-col shrink-0 mr-1">
               <button 
                 onClick={() => onMove(index, -1)}
                 disabled={index === 0}
-                className={`btn-move rounded transition-colors ${index === 0 ? 'text-slate-100' : 'text-slate-300 hover:text-slate-900 active:bg-slate-100'}`}
+                className={`move-btn ${index === 0 ? 'opacity-0 pointer-events-none' : ''}`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 15l7-7 7 7" />
                 </svg>
               </button>
               <button 
                 onClick={() => onMove(index, 1)}
                 disabled={index === total - 1}
-                className={`btn-move rounded transition-colors ${index === total - 1 ? 'text-slate-100' : 'text-slate-300 hover:text-slate-900 active:bg-slate-100'}`}
+                className={`move-btn ${index === total - 1 ? 'opacity-0 pointer-events-none' : ''}`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
             </div>
 
-            {/* Описание: две строки текста очень мелким шрифтом */}
-            <div className="flex-1 min-w-0 pr-1 h-full flex items-center">
+            {/* Описание */}
+            <div className="flex-1 min-w-0 pr-2 h-full flex items-center">
               <textarea 
                 ref={textRef}
                 rows="2"
                 value={record.description}
                 onChange={(e) => onUpdate(record.id, 'description', e.target.value)}
-                placeholder="Описание..."
-                className="text-[9px] font-medium text-slate-600 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0"
+                placeholder="Запись..."
+                className="text-[12px] font-medium text-slate-700 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight"
               />
             </div>
 
-            {/* Три компактных инпута */}
+            {/* Значения */}
             <div className="flex items-center gap-1 shrink-0">
               {['val1', 'val2', 'val3'].map((f) => (
                 <input 
@@ -125,7 +153,7 @@
                   maxLength="2"
                   value={record[f] || ''}
                   onChange={(e) => onUpdate(record.id, f, e.target.value.slice(0, 2))}
-                  className="w-7 h-7 text-center border border-slate-100 rounded text-[11px] font-black focus:border-slate-400 focus:outline-none bg-slate-50 text-slate-700"
+                  className="w-8 h-8 text-center border border-slate-100 rounded text-[13px] font-bold focus:border-slate-400 focus:outline-none bg-slate-50 text-slate-800"
                   placeholder="-"
                 />
               ))}
@@ -134,9 +162,10 @@
             {/* Удаление */}
             <button 
               onClick={() => onDelete(record.id)}
-              className="ml-1.5 text-slate-200 hover:text-red-400 p-1 transition-colors shrink-0"
+              className="delete-btn shrink-0"
+              aria-label="Удалить"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -147,18 +176,18 @@
       const App = () => {
         const [records, setRecords] = useState(() => {
           try {
-            const saved = localStorage.getItem('inline_tracker_v3');
+            const saved = localStorage.getItem('inline_tracker_v6');
             return saved ? JSON.parse(saved) : [];
           } catch(e) { return []; }
         });
 
         useEffect(() => {
-          localStorage.setItem('inline_tracker_v3', JSON.stringify(records));
+          localStorage.setItem('inline_tracker_v6', JSON.stringify(records));
         }, [records]);
 
         const addNewRecord = () => {
           const newRecord = {
-            id: Date.now().toString(),
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             description: '',
             val1: '',
             val2: '',
@@ -177,9 +206,7 @@
         };
 
         const deleteRecord = (id) => {
-          if(confirm('Удалить?')) {
-            setRecords(prev => prev.filter(r => r.id !== id));
-          }
+          setRecords(prev => prev.filter(r => r.id !== id));
         };
 
         const moveRecord = (index, direction) => {
@@ -193,18 +220,18 @@
         };
 
         return (
-          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-20">
-            <header className="px-4 pt-4 pb-1 sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 flex justify-between items-end">
+          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-24">
+            <header className="px-5 pt-5 pb-2 sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 flex justify-between items-end">
               <div>
-                <h1 className="text-sm font-black text-slate-900 tracking-tighter uppercase leading-none">Compact Tracker</h1>
-                <div className="h-0.5 w-4 bg-slate-900 rounded-full mt-0.5"></div>
+                <h1 className="text-base font-black text-slate-900 tracking-tight uppercase leading-none">Tracker</h1>
+                <div className="h-0.5 w-4 bg-slate-900 rounded-full mt-1"></div>
               </div>
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                CNT: {records.length}
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                Total: {records.length}
               </div>
             </header>
 
-            <main className="p-3 flex flex-col">
+            <main className="p-4 flex flex-col">
               {records.map((r, idx) => (
                 <TrackerItem 
                   key={r.id} 
@@ -218,19 +245,19 @@
               ))}
               
               {records.length === 0 && (
-                <div className="py-12 text-center opacity-10">
-                  <p className="font-bold text-[9px] uppercase tracking-widest">No entries</p>
+                <div className="py-20 text-center opacity-10">
+                  <p className="font-bold text-[10px] uppercase tracking-widest">List is empty</p>
                 </div>
               )}
             </main>
 
-            <div className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none">
+            <div className="fixed bottom-8 left-0 right-0 flex justify-center pointer-events-none">
               <button 
                 onClick={addNewRecord}
-                className="w-11 h-11 bg-slate-900 text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all pointer-events-auto"
+                className="w-14 h-14 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all pointer-events-auto"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M12 6v12m6-6H6" />
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" />
                 </svg>
               </button>
             </div>
