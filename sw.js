@@ -1,8 +1,25 @@
 
-const CACHE_NAME = 'tracker-v3';
-self.addEventListener('install', (e) => {
+const CACHE_NAME = 'tracker-v5-force-refresh';
+self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
-self.addEventListener('fetch', (e) => {
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
 });
