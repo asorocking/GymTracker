@@ -1,19 +1,8 @@
 
-const CACHE_NAME = 'tracker-v2';
-const ASSETS = [
-  './',
-  './index.html',
-  './index.tsx',
-  './manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/@babel/standalone/babel.min.js'
-];
-
+const CACHE_NAME = 'tracker-v3';
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
-
 self.addEventListener('fetch', (e) => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
 });

@@ -3,25 +3,18 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#4f46e5" />
-    
-    <!-- PWA Meta -->
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Quick Tracker" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/25/25231.png" />
-
     <title>Quick Tracker</title>
     
-    <!-- Скрипты библиотек (Глобальные переменные) -->
+    <!-- Скрипты библиотек -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
+      /* Спиннер, который исчезнет, когда React отрендерит контент */
       #root:empty::before {
         content: "";
         display: block;
@@ -34,34 +27,161 @@
         animation: spin 1s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+      body { 
+        -webkit-tap-highlight-color: transparent; 
+        touch-action: manipulation; 
+        background-color: #f8fafc;
+        margin: 0;
+        padding: 0;
+      }
     </style>
   <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 font-sans overflow-hidden">
+  <body>
     <div id="root"></div>
-    
-    <!-- Загрузка логики без использования ES-модулей -->
-    <script 
-      type="text/babel" 
-      data-presets="react,typescript" 
-      src="./index.tsx"
-    ></script>
+
+    <!-- Основной код приложения прямо здесь, чтобы избежать проблем с путями и MIME-типами -->
+    <script type="text/babel" data-presets="react,typescript">
+      const { useState, useEffect } = React;
+
+      // --- Компоненты ---
+      const TrackerItem = ({ record, onDelete, onEdit, onValueChange }) => {
+        return (
+          <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between shadow-sm active:bg-slate-50 transition-colors">
+            <div className="flex-1 cursor-pointer pr-4" onClick={() => onEdit(record)}>
+              <div className="text-xs font-bold text-slate-800 uppercase tracking-wide truncate">
+                {record.line1 || 'Без названия'}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                {record.line2 || '...'}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {['val1', 'val2', 'val3'].map((f) => (
+                <input 
+                  key={f}
+                  type="text" 
+                  inputMode="numeric"
+                  value={record[f] || ''}
+                  onChange={(e) => onValueChange(record.id, f, e.target.value.slice(0, 2))}
+                  className="w-10 h-9 text-center border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50"
+                  placeholder="0"
+                />
+              ))}
+            </div>
+
+            <button onClick={() => onDelete(record.id)} className="ml-3 text-slate-300 hover:text-red-500 p-1">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        );
+      };
+
+      const RecordModal = ({ onClose, onSubmit, initialData }) => {
+        const [form, setForm] = useState({
+          line1: initialData?.line1 || '',
+          line2: initialData?.line2 || '',
+          val1: initialData?.val1 || '',
+          val2: initialData?.val2 || '',
+          val3: initialData?.val3 || '',
+        });
+
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-2xl shadow-2xl p-6">
+              <h2 className="text-xl font-black text-slate-900 mb-6">{initialData ? 'Изменить' : 'Новая запись'}</h2>
+              <div className="space-y-4">
+                <input 
+                  autoFocus
+                  className="w-full border-b-2 border-slate-100 p-2 text-base focus:border-indigo-500 outline-none"
+                  placeholder="Заголовок"
+                  value={form.line1}
+                  onChange={e => setForm({...form, line1: e.target.value})}
+                />
+                <input 
+                  className="w-full border-b-2 border-slate-100 p-2 text-sm focus:border-indigo-500 outline-none"
+                  placeholder="Описание"
+                  value={form.line2}
+                  onChange={e => setForm({...form, line2: e.target.value})}
+                />
+                <div className="flex gap-4 pt-4">
+                  <button onClick={onClose} className="flex-1 py-3 text-slate-400 font-bold uppercase text-xs">Отмена</button>
+                  <button onClick={() => onSubmit(form)} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Готово</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [records, setRecords] = useState(() => {
+          const saved = localStorage.getItem('tracker_vfinal');
+          return saved ? JSON.parse(saved) : [];
+        });
+        const [modal, setModal] = useState({open: false});
+
+        useEffect(() => {
+          localStorage.setItem('tracker_vfinal', JSON.stringify(records));
+        }, [records]);
+
+        const handleSave = (formData) => {
+          if (modal.data) {
+            setRecords(prev => prev.map(r => r.id === modal.data.id ? { ...r, ...formData } : r));
+          } else {
+            setRecords(prev => [{ ...formData, id: Date.now().toString() }, ...prev]);
+          }
+          setModal({open: false});
+        };
+
+        return (
+          <div className="h-screen bg-slate-50 flex flex-col max-w-md mx-auto relative overflow-hidden">
+            <header className="bg-white p-6 pb-4 border-b border-slate-100">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter">TRACKER</h1>
+            </header>
+            <main className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+              {records.map(r => (
+                <TrackerItem 
+                  key={r.id} record={r} 
+                  onDelete={id => setRecords(prev => prev.filter(x => x.id !== id))}
+                  onEdit={data => setModal({open: true, data})}
+                  onValueChange={(id, f, v) => setRecords(prev => prev.map(r => r.id === id ? {...r, [f]: v} : r))}
+                />
+              ))}
+            </main>
+            <button 
+              onClick={() => setModal({open: true})}
+              className="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            {modal.open && <RecordModal initialData={modal.data} onClose={() => setModal({open: false})} onSubmit={handleSave} />}
+          </div>
+        );
+      };
+
+      console.log("React is starting...");
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
 
     <script>
+      // Регистрация SW
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js', { scope: './' })
-            .then(reg => console.log('SW OK'))
-            .catch(err => console.log('SW Error', err));
+          navigator.serviceWorker.register('./sw.js').catch(console.error);
         });
       }
     </script>
