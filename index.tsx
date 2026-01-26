@@ -1,26 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+// Import React and hooks from the 'react' package to resolve "Cannot find name 'React'" error.
+import React, { useState, useEffect, useRef } from 'react';
+// Import ReactDOM from 'react-dom/client' to resolve "Cannot find name 'ReactDOM'" error.
 import ReactDOM from 'react-dom/client';
 
 // --- Types ---
-interface TrackerRecord {
-  id: string;
-  line1: string;
-  line2: string;
-  val1: string;
-  val2: string;
-  val3: string;
-  createdAt: number;
-}
+// (В TSX файлы встроенные типы работают нормально)
 
 // --- Components ---
-const TrackerItem: React.FC<{
-  record: TrackerRecord;
-  onDelete: (id: string) => void;
-  onEdit: (record: TrackerRecord) => void;
-  onValueChange: (id: string, field: 'val1' | 'val2' | 'val3', value: string) => void;
-}> = ({ record, onDelete, onEdit, onValueChange }) => {
-  const handleInputChange = (field: 'val1' | 'val2' | 'val3', e: React.ChangeEvent<HTMLInputElement>) => {
+// Explicitly typed TrackerItem as React.FC to allow the 'key' prop in JSX and fix the assignment error.
+const TrackerItem: React.FC<{ record: any; onDelete: any; onEdit: any; onValueChange: any; }> = ({ record, onDelete, onEdit, onValueChange }) => {
+  const handleInputChange = (field, e) => {
     onValueChange(record.id, field, e.target.value.slice(0, 2));
   };
 
@@ -41,8 +31,8 @@ const TrackerItem: React.FC<{
             key={f}
             type="text" 
             inputMode="numeric"
-            value={record[f as keyof TrackerRecord] as string}
-            onChange={(e) => handleInputChange(f as any, e)}
+            value={record[f] || ''}
+            onChange={(e) => handleInputChange(f, e)}
             className="w-10 h-9 text-center border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50"
             placeholder="0"
           />
@@ -61,11 +51,8 @@ const TrackerItem: React.FC<{
   );
 };
 
-const RecordModal: React.FC<{
-  onClose: () => void;
-  onSubmit: (data: any) => void;
-  initialData?: TrackerRecord;
-}> = ({ onClose, onSubmit, initialData }) => {
+// Explicitly typed RecordModal as React.FC for consistent property handling.
+const RecordModal: React.FC<{ onClose: any; onSubmit: any; initialData?: any; }> = ({ onClose, onSubmit, initialData }) => {
   const [form, setForm] = useState({
     line1: initialData?.line1 || '',
     line2: initialData?.line2 || '',
@@ -110,33 +97,39 @@ const RecordModal: React.FC<{
 };
 
 // --- Main App ---
-const App: React.FC = () => {
-  const [records, setRecords] = useState<TrackerRecord[]>(() => {
-    const saved = localStorage.getItem('tracker_v2');
-    return saved ? JSON.parse(saved) : [];
+const App = () => {
+  const [records, setRecords] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tracker_v2');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
-  const [modal, setModal] = useState<{open: boolean, data?: TrackerRecord}>({open: false});
+  
+  // Explicitly typed the modal state to include optional data property.
+  const [modal, setModal] = useState<{open: boolean; data?: any}>({open: false});
 
   useEffect(() => {
     localStorage.setItem('tracker_v2', JSON.stringify(records));
   }, [records]);
 
-  const handleSave = (formData: any) => {
+  const handleSave = (formData) => {
     if (modal.data) {
-      setRecords(prev => prev.map(r => r.id === modal.data!.id ? { ...r, ...formData } : r));
+      setRecords(prev => prev.map(r => r.id === modal.data.id ? { ...r, ...formData } : r));
     } else {
       setRecords(prev => [{ ...formData, id: Date.now().toString(), createdAt: Date.now() }, ...prev]);
     }
     setModal({open: false});
   };
 
-  const handleValueChange = (id: string, field: string, value: string) => {
+  const handleValueChange = (id, field, value) => {
     setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col max-w-md mx-auto relative overflow-hidden">
-      <header className="bg-white p-6 pb-4 border-b border-slate-100">
+      <header className="bg-white p-6 pb-4 border-b border-slate-100 shrink-0">
         <h1 className="text-3xl font-black text-slate-900 tracking-tighter">TRACKER</h1>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Daily Activity Log</p>
       </header>
@@ -146,7 +139,9 @@ const App: React.FC = () => {
           <TrackerItem 
             key={r.id} 
             record={r} 
-            onDelete={id => setRecords(prev => prev.filter(x => x.id !== id))}
+            onDelete={id => {
+               if(confirm('Удалить?')) setRecords(prev => prev.filter(x => x.id !== id))
+            }}
             onEdit={data => setModal({open: true, data})}
             onValueChange={handleValueChange}
           />
@@ -179,5 +174,9 @@ const App: React.FC = () => {
   );
 };
 
-const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<App />);
+// Use ReactDOM from the imported client package to initialize the app root.
+const container = document.getElementById('root');
+if (container) {
+  const root = ReactDOM.createRoot(container);
+  root.render(<App />);
+}

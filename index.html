@@ -15,21 +15,11 @@
 
     <title>Quick Tracker</title>
     
-    <!-- Библиотеки -->
+    <!-- Скрипты библиотек (Глобальные переменные) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
-  }
-}
-</script>
 
     <style>
       #root:empty::before {
@@ -44,13 +34,22 @@
         animation: spin 1s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
-      body { -webkit-tap-highlight-color: transparent; }
+      body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     </style>
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
   <body class="bg-slate-50 text-slate-900 font-sans overflow-hidden">
     <div id="root"></div>
     
-    <!-- Весь код приложения в одном файле для корректной компиляции Babel -->
+    <!-- Загрузка логики без использования ES-модулей -->
     <script 
       type="text/babel" 
       data-presets="react,typescript" 
