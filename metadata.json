@@ -1,5 +1,5 @@
 {
-  "name": "Hello PWA",
-  "description": "A simple Hello World Progressive Web App.",
+  "name": "Quick Tracker PWA",
+  "description": "Простой мобильный трекер с офлайн доступом.",
   "requestFramePermissions": []
 }
