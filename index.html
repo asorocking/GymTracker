@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
   <head>
@@ -45,6 +46,21 @@
 
       .tracker-item {
         min-height: 52px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      }
+      
+      .tracker-item.dragging {
+        opacity: 0.4;
+        transform: scale(0.98);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      }
+
+      .drag-handle {
+        cursor: grab;
+        touch-action: none;
+      }
+      .drag-handle:active {
+        cursor: grabbing;
       }
       
       textarea {
@@ -61,13 +77,13 @@
         border-radius: 6px;
       }
 
-      .fab-container {
-        position: fixed;
-        bottom: 32px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 50;
-        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15));
+      .add-button-inline {
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+      }
+      .add-button-inline:active {
+        transform: scale(0.92);
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
       }
 
       .toast {
@@ -309,7 +325,16 @@
         );
       };
 
-      const TrackerItem = ({ record, index, total, onDelete, onUpdate, onMove }) => {
+      const TrackerItem = ({ 
+        record, 
+        index, 
+        onDelete, 
+        onUpdate, 
+        onDragStart, 
+        onDragOver, 
+        onDragEnd,
+        isDragging 
+      }) => {
         const [isConfirming, setIsConfirming] = useState(false);
         const textRef = useRef(null);
         const confirmTimeout = useRef(null);
@@ -333,9 +358,32 @@
         };
 
         return (
-          <div className={`border border-slate-200 rounded-xl pl-1 pr-1 flex items-center shadow-sm fade-in mb-2 tracker-item transition-all duration-200 ${record.isHighlighted ? 'bg-slate-100 border-slate-300 ring-1 ring-slate-300' : 'bg-white'}`}>
+          <div 
+            draggable="true"
+            onDragStart={(e) => onDragStart(e, index)}
+            onDragOver={(e) => onDragOver(e, index)}
+            onDragEnd={onDragEnd}
+            className={`border border-slate-200 rounded-xl pl-1 pr-1 flex items-center shadow-sm fade-in mb-2 tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''} ${record.isHighlighted ? 'bg-slate-100 border-slate-300 ring-1 ring-slate-300' : 'bg-white'}`}
+          >
             
-            <div className="flex items-center">
+            <div className="flex items-center drag-handle px-1">
+              <div className="flex flex-col gap-0.5 opacity-30">
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                </div>
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                </div>
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                  <div className="w-1 h-1 bg-slate-900 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center ml-1">
               <button 
                 onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
                 className={`p-1 rounded-md transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-600' : 'text-slate-300'}`}
@@ -346,16 +394,7 @@
               </button>
             </div>
 
-            <div className="flex flex-col shrink-0 mr-1.5 border-l border-slate-100 pl-0.5 ml-0.5">
-              <button onClick={() => onMove(index, -1)} className={`p-1 ${index === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-300'}`}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 15l7-7 7 7" /></svg>
-              </button>
-              <button onClick={() => onMove(index, 1)} className={`p-1 ${index === total - 1 ? 'opacity-0 pointer-events-none' : 'text-slate-300'}`}>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M19 9l-7 7-7-7" /></svg>
-              </button>
-            </div>
-
-            <div className="flex-1 min-w-0 pr-1 py-2">
+            <div className="flex-1 min-w-0 pr-1 py-2 ml-1">
               <textarea 
                 ref={textRef}
                 rows="2"
@@ -399,6 +438,7 @@
         const [toast, setToast] = useState({ show: false, message: '' });
         const [isLoaded, setIsLoaded] = useState(false);
         const [isStatsOpen, setIsStatsOpen] = useState(false);
+        const [draggedIdx, setDraggedIdx] = useState(null);
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
         
@@ -523,26 +563,41 @@
           setRecords(prev => prev.filter(r => r.id !== id));
         };
 
-        const moveRecord = (indexInCurrent, direction) => {
-          const itemToMove = currentRecords[indexInCurrent];
-          const targetIndexInCurrent = indexInCurrent + direction;
-          if (targetIndexInCurrent < 0 || targetIndexInCurrent >= currentRecords.length) return;
+        // Drag and Drop Logic
+        const handleDragStart = (e, index) => {
+          setDraggedIdx(index);
+          e.dataTransfer.effectAllowed = "move";
+        };
 
-          const otherItem = currentRecords[targetIndexInCurrent];
-          
+        const handleDragOver = (e, index) => {
+          e.preventDefault();
+          if (draggedIdx === null || draggedIdx === index) return;
+
+          const itemMoving = currentRecords[draggedIdx];
+          const targetItem = currentRecords[index];
+
           setRecords(prev => {
-            const newRecords = [...prev];
-            const idx1 = newRecords.findIndex(r => r.id === itemToMove.id);
-            const idx2 = newRecords.findIndex(r => r.id === otherItem.id);
-            [newRecords[idx1], newRecords[idx2]] = [newRecords[idx2], newRecords[idx1]];
-            return newRecords;
+            const nextRecords = [...prev];
+            const idxGlobalMoving = nextRecords.findIndex(r => r.id === itemMoving.id);
+            const idxGlobalTarget = nextRecords.findIndex(r => r.id === targetItem.id);
+            
+            // Swap in the global array
+            [nextRecords[idxGlobalMoving], nextRecords[idxGlobalTarget]] = 
+            [nextRecords[idxGlobalTarget], nextRecords[idxGlobalMoving]];
+            
+            return nextRecords;
           });
+          setDraggedIdx(index);
+        };
+
+        const handleDragEnd = () => {
+          setDraggedIdx(null);
         };
 
         if (!isLoaded) return null;
 
         return (
-          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-32">
+          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
             <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
             
             <StatsModal 
@@ -623,42 +678,42 @@
               </div>
             </header>
 
-            <main className="px-4 pb-4 pt-1 flex flex-col">
-              <div className="h-1"></div>
-              {currentRecords.map((r, idx) => (
-                <TrackerItem 
-                  key={r.id} 
-                  record={r} 
-                  index={idx}
-                  total={currentRecords.length}
-                  onDelete={deleteRecord}
-                  onUpdate={updateRecord}
-                  onMove={moveRecord}
-                />
-              ))}
+            <main className="px-4 pb-12 pt-1 flex flex-col items-start">
+              <div className="h-1 w-full"></div>
+              
+              <div className="w-full">
+                {currentRecords.map((r, idx) => (
+                  <TrackerItem 
+                    key={r.id}
+                    record={r} 
+                    index={idx}
+                    onDelete={deleteRecord}
+                    onUpdate={updateRecord}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                    isDragging={draggedIdx === idx}
+                  />
+                ))}
+              </div>
               
               {currentRecords.length === 0 && (
-                <div className="py-24 text-center opacity-20 select-none">
-                  <div className="mb-4 flex justify-center">
-                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="font-bold text-[11px] uppercase tracking-[0.3em]">Пусто</p>
+                <div className="w-full py-16 text-center opacity-20 select-none">
+                  <p className="font-bold text-[10px] uppercase tracking-[0.3em]">Пусто</p>
                 </div>
               )}
-            </main>
 
-            <div className="fab-container">
+              {/* Кнопка добавления: всегда слева под записями */}
               <button 
                 onClick={addNewRecord}
-                className="w-16 h-16 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 active:bg-black transition-all transform-gpu"
+                className="add-button-inline mt-2 mb-8 ml-2 w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center transform-gpu shadow-lg hover:bg-black"
+                title="Добавить запись"
               >
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v12m6-6H6" />
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" />
                 </svg>
               </button>
-            </div>
+            </main>
           </div>
         );
       };
