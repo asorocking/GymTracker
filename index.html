@@ -86,6 +86,11 @@
         filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
       }
 
+      .secondary-button {
+        transition: all 0.2s ease;
+        @apply flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border border-slate-200 bg-white text-slate-600 shadow-sm active:scale-95;
+      }
+
       .toast {
         position: fixed;
         top: 20px;
@@ -555,6 +560,39 @@
           setRecords(prev => [...prev, newRecord]);
         };
 
+        const copyFromLastWorkout = () => {
+          // Находим все уникальные даты, где есть записи, и которые раньше текущей даты
+          const pastDates = [...new Set(records.map(r => r.dateKey))]
+            .filter(dk => dk < viewDateKey)
+            .sort();
+
+          const lastWorkoutDateKey = pastDates.pop();
+
+          if (!lastWorkoutDateKey) {
+            showToast('Прошлых тренировок не найдено 🤷‍♂️');
+            return;
+          }
+
+          const recordsToCopy = records.filter(r => r.dateKey === lastWorkoutDateKey);
+          
+          if (recordsToCopy.length === 0) {
+            showToast('Нет данных для копирования 🤷‍♂️');
+            return;
+          }
+
+          const newClonedRecords = recordsToCopy.map(r => ({
+            ...r,
+            id: String(Date.now() + Math.random() + Math.random()),
+            dateKey: viewDateKey,
+            isNew: false,
+            isHighlighted: r.isHighlighted, // Исправлено: копируем статус выделения
+            createdAt: Date.now()
+          }));
+
+          setRecords(prev => [...prev, ...newClonedRecords]);
+          showToast(`Скопировано: ${lastWorkoutDateKey} 📋`);
+        };
+
         const updateRecord = (id, field, value) => {
           setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
         };
@@ -629,6 +667,15 @@
                 
                 <div className="flex items-center gap-0.5 flex-none">
                   <button 
+                    onClick={copyFromLastWorkout}
+                    title="Копировать из прошлой тренировки"
+                    className="p-1.5 text-slate-400 active:scale-90 hover:text-slate-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                    </svg>
+                  </button>
+                  <button 
                     onClick={() => setIsStatsOpen(true)}
                     title="Статистика веса"
                     className="p-1.5 text-slate-400 active:scale-90 hover:text-slate-600 transition-colors"
@@ -698,8 +745,20 @@
               </div>
               
               {currentRecords.length === 0 && (
-                <div className="w-full py-16 text-center opacity-20 select-none">
-                  <p className="font-bold text-[10px] uppercase tracking-[0.3em]">Пусто</p>
+                <div className="w-full py-12 flex flex-col items-center justify-center gap-6">
+                  <div className="text-center opacity-20 select-none">
+                    <p className="font-bold text-[10px] uppercase tracking-[0.3em]">Пусто</p>
+                  </div>
+                  
+                  <button 
+                    onClick={copyFromLastWorkout}
+                    className="secondary-button"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                    </svg>
+                    Повторить прошлую
+                  </button>
                 </div>
               )}
 
