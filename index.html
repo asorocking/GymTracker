@@ -217,6 +217,7 @@
           kg: "кг",
           stats: "Статистика",
           export: "Экспорт",
+          import: "Импорт",
           save: "Сохранить",
           progress: "Прогресс веса",
           noData: "Недостаточно данных",
@@ -226,6 +227,7 @@
           savedToast: "Сохранено 💾",
           errorToast: "Ошибка ⚠️",
           exportToast: "Экспорт 📤",
+          importToast: "Импортировано ✅",
           addExercise: "Добавить упражнение",
           addItem: "Добавить в список",
           repeatLast: "Повторить прошлую",
@@ -257,6 +259,7 @@
           kg: "kg",
           stats: "Stats",
           export: "Export",
+          import: "Import",
           save: "Save",
           progress: "Weight Progress",
           noData: "Not enough data",
@@ -266,6 +269,7 @@
           savedToast: "Saved 💾",
           errorToast: "Error ⚠️",
           exportToast: "Exported 📤",
+          importToast: "Imported ✅",
           addExercise: "Add Exercise",
           addItem: "Add to List",
           repeatLast: "Repeat previous",
@@ -799,6 +803,7 @@
         const [isDraggingInProgress, setIsDraggingInProgress] = useState(false);
         const [isClearConfirming, setIsClearConfirming] = useState(false);
         const clearConfirmTimeout = useRef(null);
+        const importFileRef = useRef(null);
 
         const t = useMemo(() => i18n[language], [language]);
 
@@ -881,6 +886,41 @@
           link.click();
           URL.revokeObjectURL(url);
           showToast(t.exportToast);
+        };
+
+        const importJSON = (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            try {
+              const data = JSON.parse(e.target.result);
+              if (data.records) setRecords(data.records);
+              if (data.weights) setWeights(data.weights);
+              if (data.uiSettings) setUiSettings(data.uiSettings);
+              if (data.mode) setMode(data.mode);
+
+              // Force saving to DB after state updates
+              if (data.records) await saveToDB(data.records);
+              if (data.weights) {
+                for (const [dk, w] of Object.entries(data.weights)) {
+                   await saveWeightToDB(dk, w);
+                }
+              }
+              
+              showToast(t.importToast);
+              event.target.value = ''; // Reset input
+            } catch (err) {
+              console.error(err);
+              showToast(t.errorToast);
+            }
+          };
+          reader.readAsText(file);
+        };
+
+        const triggerImport = () => {
+          importFileRef.current.click();
         };
 
         const addNewRecord = () => {
@@ -1002,6 +1042,10 @@
                   )}
                   <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  </button>
+                  <input type="file" ref={importFileRef} onChange={importJSON} accept=".json" className="hidden" />
+                  <button onClick={triggerImport} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.import}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8" /></svg>
                   </button>
                   <button onClick={exportJSON} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.export}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 8l4 4m0 0l4-4m-4 4V4" /></svg>
