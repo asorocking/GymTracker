@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'tracker-v5-force-refresh';
+const CACHE_NAME = 'tracker-v7-final';
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });

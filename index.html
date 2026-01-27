@@ -1,16 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#f8fafc" />
-    <title>Gym Tracker</title>
+    <title>GymTracker Pro</title>
     
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
       #root:empty::before {
@@ -31,70 +32,80 @@
         overscroll-behavior-y: contain;
         background-color: #f8fafc;
         height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       }
       
       .fade-in {
-        animation: fadeIn 0.15s ease-out forwards;
+        animation: fadeIn 0.2s ease-out forwards;
       }
       @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.98); }
-        to { opacity: 1; transform: scale(1); }
-      }
-
-      input::-webkit-outer-spin-button,
-      input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
       .tracker-item {
-        height: 48px;
+        min-height: 52px;
       }
       
       textarea {
         resize: none !important;
         overflow: hidden;
-        line-height: 1.2;
+        line-height: 1.25;
         appearance: none;
         -webkit-appearance: none;
       }
 
-      textarea::-webkit-resizer {
-        display: none;
+      .delete-btn-active {
+        color: #ef4444 !important;
+        background-color: #fef2f2;
+        border-radius: 6px;
       }
 
-      .move-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 20px;
-        color: #cbd5e1;
-        transition: color 0.2s;
-      }
-      .move-btn:active:not(:disabled) {
-        color: #0f172a;
-      }
-      
-      .delete-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 40px;
-        color: #e2e8f0;
-        transition: color 0.2s;
-      }
-      .delete-btn:active {
-        color: #ef4444;
-      }
-
-      /* Дополнительная гарантия видимости над клавиатурой на некоторых устройствах */
       .fab-container {
         position: fixed;
-        bottom: 24px;
-        right: 24px;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%);
         z-index: 50;
+        filter: drop-shadow(0 10px 15px rgba(0,0,0,0.15));
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        padding: 12px 20px;
+        border-radius: 99px;
+        background: #0f172a;
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .toast.show {
+        opacity: 1;
+        top: 30px;
+      }
+
+      .nav-btn {
+        @apply p-1.5 text-slate-400 hover:text-slate-900 transition-all active:scale-125;
+      }
+
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .modal-backdrop {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
     </style>
   </head>
@@ -102,10 +113,206 @@
     <div id="root"></div>
 
     <script type="text/babel" data-presets="react,typescript">
-      const { useState, useEffect, useRef } = React;
+      const { useState, useEffect, useRef, useMemo } = React;
+
+      // IndexedDB Constants
+      const DB_NAME = 'TrackerDB';
+      const STORE_RECORDS = 'records';
+      const STORE_WEIGHTS = 'weights';
+      const DB_VERSION = 2;
+
+      // IndexedDB Helper Functions
+      const initDB = () => {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_RECORDS)) {
+              db.createObjectStore(STORE_RECORDS, { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains(STORE_WEIGHTS)) {
+              db.createObjectStore(STORE_WEIGHTS, { keyPath: 'dateKey' });
+            }
+          };
+          request.onsuccess = (e) => resolve(e.target.result);
+          request.onerror = (e) => reject(e.target.error);
+        });
+      };
+
+      const saveToDB = async (records) => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_RECORDS, 'readwrite');
+        const store = tx.objectStore(STORE_RECORDS);
+        return new Promise((resolve, reject) => {
+          const clearReq = store.clear();
+          clearReq.onsuccess = () => {
+            if (records.length === 0) {
+              resolve();
+              return;
+            }
+            records.forEach(r => store.put(r));
+            tx.oncomplete = () => resolve();
+          };
+          clearReq.onerror = () => reject(clearReq.error);
+        });
+      };
+
+      const loadFromDB = async () => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_RECORDS, 'readonly');
+        const store = tx.objectStore(STORE_RECORDS);
+        return new Promise((resolve) => {
+          const request = store.getAll();
+          request.onsuccess = () => resolve(request.result);
+        });
+      };
+
+      const saveWeightToDB = async (dateKey, weight) => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_WEIGHTS, 'readwrite');
+        const store = tx.objectStore(STORE_WEIGHTS);
+        return new Promise((resolve, reject) => {
+          store.put({ dateKey, weight });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      };
+
+      const loadWeightsFromDB = async () => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_WEIGHTS, 'readonly');
+        const store = tx.objectStore(STORE_WEIGHTS);
+        return new Promise((resolve) => {
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const weightsMap = {};
+            request.result.forEach(item => {
+              weightsMap[item.dateKey] = item.weight;
+            });
+            resolve(weightsMap);
+          };
+        });
+      };
+
+      const getDateKey = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+
+      const StatsModal = ({ isOpen, onClose, weights }) => {
+        const canvasRef = useRef(null);
+        const chartInstance = useRef(null);
+
+        useEffect(() => {
+          if (isOpen && canvasRef.current) {
+            const sortedEntries = Object.entries(weights)
+              .filter(([_, val]) => val !== '')
+              .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+            if (sortedEntries.length === 0) return;
+
+            const labels = sortedEntries.map(([date]) => {
+              const d = new Date(date);
+              return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            });
+            const data = sortedEntries.map(([_, val]) => parseFloat(val));
+
+            if (chartInstance.current) {
+              chartInstance.current.destroy();
+            }
+
+            const ctx = canvasRef.current.getContext('2d');
+            chartInstance.current = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Вес (кг)',
+                  data,
+                  borderColor: '#0f172a',
+                  backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                  borderWidth: 3,
+                  tension: 0.4,
+                  fill: true,
+                  pointBackgroundColor: '#0f172a',
+                  pointRadius: 4,
+                  pointHoverRadius: 6
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#0f172a',
+                    titleFont: { weight: 'bold' },
+                    padding: 10,
+                    cornerRadius: 8
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: false,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 10, weight: '600' } }
+                  },
+                  x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10, weight: '600' } }
+                  }
+                }
+              }
+            });
+          }
+        }, [isOpen, weights]);
+
+        if (!isOpen) return null;
+
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop fade-in">
+            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Прогресс веса</h2>
+                <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-slate-900">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="p-6 flex-1 min-h-[300px]">
+                {Object.keys(weights).filter(k => weights[k] !== '').length > 0 ? (
+                  <canvas ref={canvasRef}></canvas>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <p className="text-sm font-bold uppercase tracking-widest text-center">Недостаточно данных</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="px-6 pb-6 pt-2">
+                <button 
+                  onClick={onClose}
+                  className="w-full py-3 bg-slate-100 text-slate-900 font-bold rounded-xl active:scale-95 transition-all"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
 
       const TrackerItem = ({ record, index, total, onDelete, onUpdate, onMove }) => {
+        const [isConfirming, setIsConfirming] = useState(false);
         const textRef = useRef(null);
+        const confirmTimeout = useRef(null);
 
         useEffect(() => {
           if (record.isNew && textRef.current) {
@@ -114,67 +321,71 @@
           }
         }, []);
 
+        const handleDeleteClick = (e) => {
+          e.preventDefault();
+          if (isConfirming) {
+            onDelete(record.id);
+          } else {
+            setIsConfirming(true);
+            if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
+            confirmTimeout.current = setTimeout(() => setIsConfirming(false), 3000);
+          }
+        };
+
         return (
-          <div className="bg-white border border-slate-200 rounded-lg pl-1 pr-1 flex items-center justify-between shadow-sm fade-in mb-1.5 tracker-item">
+          <div className={`border border-slate-200 rounded-xl pl-1 pr-1 flex items-center shadow-sm fade-in mb-2 tracker-item transition-all duration-200 ${record.isHighlighted ? 'bg-slate-100 border-slate-300 ring-1 ring-slate-300' : 'bg-white'}`}>
             
-            {/* Кнопки перемещения */}
-            <div className="flex flex-col shrink-0 mr-1">
+            <div className="flex items-center">
               <button 
-                onClick={() => onMove(index, -1)}
-                disabled={index === 0}
-                className={`move-btn ${index === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+                onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
+                className={`p-1 rounded-md transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-600' : 'text-slate-300'}`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 15l7-7 7 7" />
-                </svg>
-              </button>
-              <button 
-                onClick={() => onMove(index, 1)}
-                disabled={index === total - 1}
-                className={`move-btn ${index === total - 1 ? 'opacity-0 pointer-events-none' : ''}`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 9l-7 7-7-7" />
+                <svg className="w-4 h-4" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" strokeWidth="2.5" />
                 </svg>
               </button>
             </div>
 
-            {/* Описание */}
-            <div className="flex-1 min-w-0 pr-2 h-full flex items-center">
+            <div className="flex flex-col shrink-0 mr-1.5 border-l border-slate-100 pl-0.5 ml-0.5">
+              <button onClick={() => onMove(index, -1)} className={`p-1 ${index === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-300'}`}>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 15l7-7 7 7" /></svg>
+              </button>
+              <button onClick={() => onMove(index, 1)} className={`p-1 ${index === total - 1 ? 'opacity-0 pointer-events-none' : 'text-slate-300'}`}>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            </div>
+
+            <div className="flex-1 min-w-0 pr-1 py-2">
               <textarea 
                 ref={textRef}
                 rows="2"
                 value={record.description}
                 onChange={(e) => onUpdate(record.id, 'description', e.target.value)}
                 placeholder="Запись..."
-                className="text-[12px] font-medium text-slate-700 bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight"
+                className={`text-[14px] font-medium bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${record.isHighlighted ? 'text-slate-900' : 'text-slate-700'}`}
               />
             </div>
 
-            {/* Значения */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0 px-1">
               {['val1', 'val2', 'val3'].map((f) => (
                 <input 
                   key={f}
                   type="text" 
                   inputMode="numeric"
-                  maxLength="2"
                   value={record[f] || ''}
-                  onChange={(e) => onUpdate(record.id, f, e.target.value.slice(0, 2))}
-                  className="w-8 h-8 text-center border border-slate-100 rounded text-[13px] font-bold focus:border-slate-400 focus:outline-none bg-slate-50 text-slate-800"
-                  placeholder="-"
+                  onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 2))}
+                  className="w-8 h-8 text-center border border-slate-100 rounded-lg text-[13px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50 text-slate-900 shadow-inner"
+                  placeholder="0"
                 />
               ))}
             </div>
 
-            {/* Удаление */}
             <button 
-              onClick={() => onDelete(record.id)}
-              className="delete-btn shrink-0"
-              aria-label="Удалить"
+              onClick={handleDeleteClick}
+              className={`w-9 h-9 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-200'}`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
           </div>
@@ -182,31 +393,126 @@
       };
 
       const App = () => {
-        const [records, setRecords] = useState(() => {
-          try {
-            const saved = localStorage.getItem('inline_tracker_v6');
-            return saved ? JSON.parse(saved) : [];
-          } catch(e) { return []; }
+        const [records, setRecords] = useState([]);
+        const [weights, setWeights] = useState({});
+        const [viewDate, setViewDate] = useState(new Date());
+        const [toast, setToast] = useState({ show: false, message: '' });
+        const [isLoaded, setIsLoaded] = useState(false);
+        const [isStatsOpen, setIsStatsOpen] = useState(false);
+
+        const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
+        
+        const currentRecords = useMemo(() => 
+          records.filter(r => r.dateKey === viewDateKey),
+          [records, viewDateKey]
+        );
+
+        const currentWeight = weights[viewDateKey] || '';
+
+        const displayDate = viewDate.toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit'
         });
 
+        // Load data on start
         useEffect(() => {
-          localStorage.setItem('inline_tracker_v6', JSON.stringify(records));
-        }, [records]);
+          const init = async () => {
+            try {
+              const [savedRecords, savedWeights] = await Promise.all([
+                loadFromDB(),
+                loadWeightsFromDB()
+              ]);
+              if (savedRecords && savedRecords.length > 0) {
+                const updated = savedRecords.map(r => r.dateKey ? r : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) });
+                setRecords(updated);
+              }
+              if (savedWeights) {
+                setWeights(savedWeights);
+              }
+              setIsLoaded(true);
+            } catch (err) {
+              console.error("DB Load Error", err);
+              setIsLoaded(true);
+            }
+          };
+          init();
+        }, []);
+
+        // Auto-save on every change after initial load
+        useEffect(() => {
+          if (isLoaded) {
+            saveToDB(records).catch(err => console.error("Auto-save records failed", err));
+          }
+        }, [records, isLoaded]);
+
+        const showToast = (message) => {
+          setToast({ show: true, message });
+          setTimeout(() => setToast({ show: false, message: '' }), 3000);
+        };
+
+        const changeDate = (offset) => {
+          setViewDate(prev => {
+            const next = new Date(prev);
+            next.setDate(next.getDate() + offset);
+            return next;
+          });
+        };
+
+        const handleManualSave = async () => {
+          try {
+            await Promise.all([
+              saveToDB(records),
+              saveWeightToDB(viewDateKey, currentWeight)
+            ]);
+            showToast('Данные сохранены 💾');
+          } catch (err) {
+            showToast('Ошибка сохранения ⚠️');
+          }
+        };
+
+        const handleWeightChange = (val) => {
+          const cleaned = val.replace(/[^0-9.]/g, '');
+          setWeights(prev => ({ ...prev, [viewDateKey]: cleaned }));
+          saveWeightToDB(viewDateKey, cleaned).catch(console.error);
+        };
+
+        const exportJSON = () => {
+          try {
+            if (records.length === 0 && Object.keys(weights).length === 0) {
+              showToast('Нет данных для экспорта 📭');
+              return;
+            }
+            const exportData = {
+              records,
+              weights,
+              exportedAt: new Date().toISOString()
+            };
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gym-tracker-full-export-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('JSON экспортирован 📤');
+          } catch (err) { 
+            showToast('Ошибка экспорта ❌'); 
+          }
+        };
 
         const addNewRecord = () => {
           const newRecord = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: String(Date.now() + Math.random()),
             description: '',
-            val1: '',
-            val2: '',
-            val3: '',
-            isNew: true
+            val1: '', val2: '', val3: '',
+            isNew: true,
+            isHighlighted: false,
+            createdAt: Date.now(),
+            dateKey: viewDateKey
           };
           setRecords(prev => [...prev, newRecord]);
-          
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-          }, 50);
         };
 
         const updateRecord = (id, field, value) => {
@@ -217,56 +523,139 @@
           setRecords(prev => prev.filter(r => r.id !== id));
         };
 
-        const moveRecord = (index, direction) => {
-          const newIndex = index + direction;
-          if (newIndex < 0 || newIndex >= records.length) return;
+        const moveRecord = (indexInCurrent, direction) => {
+          const itemToMove = currentRecords[indexInCurrent];
+          const targetIndexInCurrent = indexInCurrent + direction;
+          if (targetIndexInCurrent < 0 || targetIndexInCurrent >= currentRecords.length) return;
+
+          const otherItem = currentRecords[targetIndexInCurrent];
           
-          const newRecords = [...records];
-          const [movedItem] = newRecords.splice(index, 1);
-          newRecords.splice(newIndex, 0, movedItem);
-          setRecords(newRecords);
+          setRecords(prev => {
+            const newRecords = [...prev];
+            const idx1 = newRecords.findIndex(r => r.id === itemToMove.id);
+            const idx2 = newRecords.findIndex(r => r.id === otherItem.id);
+            [newRecords[idx1], newRecords[idx2]] = [newRecords[idx2], newRecords[idx1]];
+            return newRecords;
+          });
         };
+
+        if (!isLoaded) return null;
 
         return (
           <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-32">
-            <header className="px-5 pt-5 pb-2 sticky top-0 bg-slate-50/90 backdrop-blur-md z-10 flex justify-between items-end">
-              <div>
-                <h1 className="text-base font-black text-slate-900 tracking-tight uppercase leading-none">Gym Tracker</h1>
-                <div className="h-0.5 w-4 bg-slate-900 rounded-full mt-1"></div>
+            <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
+            
+            <StatsModal 
+              isOpen={isStatsOpen} 
+              onClose={() => setIsStatsOpen(false)} 
+              weights={weights} 
+            />
+
+            <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/90 backdrop-blur-md z-40 border-b border-slate-100">
+              <div className="flex justify-between items-center mb-1.5 px-2">
+                <div className="flex-none">
+                  <h1 className="text-[18px] font-extrabold text-slate-900 tracking-tight leading-none">GymTracker</h1>
+                </div>
+
+                <div className="flex-1 flex justify-center items-center px-4">
+                  <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-2 py-0.5 border border-slate-300/30">
+                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Вес</span>
+                     <input 
+                       type="text"
+                       inputMode="decimal"
+                       value={currentWeight}
+                       onChange={(e) => handleWeightChange(e.target.value)}
+                       placeholder="--"
+                       className="w-11 bg-transparent border-none text-center text-sm font-black text-slate-900 focus:outline-none placeholder:text-slate-400"
+                     />
+                     <span className="text-[10px] font-bold text-slate-400">кг</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-0.5 flex-none">
+                  <button 
+                    onClick={() => setIsStatsOpen(true)}
+                    title="Статистика веса"
+                    className="p-1.5 text-slate-400 active:scale-90 hover:text-slate-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={exportJSON} 
+                    title="Экспорт всех данных"
+                    className="p-1.5 text-slate-400 active:scale-90 hover:text-slate-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 8l4 4m0 0l4-4m-4 4V4" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={handleManualSave} 
+                    title="Принудительное сохранение"
+                    className="p-1.5 text-slate-900 active:scale-90 hover:opacity-70 transition-all"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                      <polyline points="17 21 17 13 7 13 7 21"/>
+                      <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                Total: {records.length}
+
+              <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm">
+                <button onClick={() => changeDate(-1)} className="nav-btn">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                
+                <div 
+                  onClick={() => setViewDate(new Date())}
+                  className="flex items-center cursor-pointer active:scale-95 transition-transform py-1"
+                >
+                  <span className="text-xs font-black text-slate-900 tabular-nums tracking-wide">{displayDate}</span>
+                </div>
+
+                <button onClick={() => changeDate(1)} className="nav-btn">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                </button>
               </div>
             </header>
 
-            <main className="p-4 flex flex-col">
-              {records.map((r, idx) => (
+            <main className="px-4 pb-4 pt-1 flex flex-col">
+              <div className="h-1"></div>
+              {currentRecords.map((r, idx) => (
                 <TrackerItem 
                   key={r.id} 
                   record={r} 
                   index={idx}
-                  total={records.length}
+                  total={currentRecords.length}
                   onDelete={deleteRecord}
                   onUpdate={updateRecord}
                   onMove={moveRecord}
                 />
               ))}
               
-              {records.length === 0 && (
-                <div className="py-20 text-center opacity-10">
-                  <p className="font-bold text-[10px] uppercase tracking-widest">List is empty</p>
+              {currentRecords.length === 0 && (
+                <div className="py-24 text-center opacity-20 select-none">
+                  <div className="mb-4 flex justify-center">
+                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="font-bold text-[11px] uppercase tracking-[0.3em]">Пусто</p>
                 </div>
               )}
             </main>
 
-            {/* Floating Action Button (+) */}
             <div className="fab-container">
               <button 
                 onClick={addNewRecord}
-                className="w-14 h-14 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all focus:outline-none"
+                className="w-16 h-16 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-95 active:bg-black transition-all transform-gpu"
               >
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" />
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v12m6-6H6" />
                 </svg>
               </button>
             </div>

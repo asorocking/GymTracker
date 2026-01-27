@@ -1,7 +1,6 @@
-
 {
-  "short_name": "HelloPWA",
-  "name": "Hello World Progressive App",
+  "short_name": "GymTracker",
+  "name": "GymTracker Progressive App",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/25/25231.png",
@@ -19,7 +18,7 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "theme_color": "#4f46e5",
+  "theme_color": "#0f172a",
   "background_color": "#f8fafc",
   "orientation": "portrait"
 }
