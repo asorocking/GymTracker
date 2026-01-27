@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#f8fafc" />
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3163/3163181.png" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3163/3163181.png" />
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" />
     
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json" />
@@ -57,7 +57,6 @@
       }
 
       .tracker-item {
-        min-height: 36px;
         transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
       }
       
@@ -78,7 +77,6 @@
       textarea {
         resize: none !important;
         overflow: hidden;
-        line-height: 1.1;
         appearance: none;
         -webkit-appearance: none;
       }
@@ -140,13 +138,56 @@
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
       }
+
+      /* Custom Range Style */
+      input[type=range] {
+        -webkit-appearance: none;
+        width: 100%;
+        background: transparent;
+      }
+      input[type=range]:focus {
+        outline: none;
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 6px;
+        cursor: pointer;
+        background: #e2e8f0;
+        border-radius: 3px;
+      }
+      input[type=range]::-webkit-slider-thumb {
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        background: #0f172a;
+        cursor: pointer;
+        -webkit-appearance: none;
+        margin-top: -6px;
+      }
+
+      /* Color Picker Hidden Hack */
+      .color-picker-wrapper {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid #e2e8f0;
+        overflow: hidden;
+      }
+      .color-picker-wrapper input[type="color"] {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        width: 50px;
+        height: 50px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body class="antialiased text-slate-900">
     <div id="root"></div>
 
     <script>
-      // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js')
@@ -159,7 +200,6 @@
     <script type="text/babel" data-presets="react,typescript">
       const { useState, useEffect, useRef, useMemo } = React;
 
-      // Localization
       const i18n = {
         ru: {
           appName: "GymTracker",
@@ -185,7 +225,13 @@
           settings: "Настройки",
           language: "Язык",
           russian: "Русский",
-          english: "English"
+          english: "English",
+          uiSettings: "Внешний вид",
+          itemHeight: "Высота записи",
+          itemWidth: "Ширина записи",
+          itemSpacing: "Интервал между записями",
+          colorHighlight: "Сет",
+          colorCompleted: "Готово"
         },
         en: {
           appName: "GymTracker",
@@ -211,11 +257,16 @@
           settings: "Settings",
           language: "Language",
           russian: "Russian",
-          english: "English"
+          english: "English",
+          uiSettings: "Appearance",
+          itemHeight: "Item Height",
+          itemWidth: "Item Width",
+          itemSpacing: "Item Spacing",
+          colorHighlight: "Set Color",
+          colorCompleted: "Done Color"
         }
       };
 
-      // IndexedDB Constants
       const DB_NAME = 'TrackerDB';
       const STORE_RECORDS = 'records';
       const STORE_WEIGHTS = 'weights';
@@ -305,11 +356,16 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, t }) => {
+      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, t }) => {
         if (!isOpen) return null;
+
+        const updateUI = (key, val) => {
+          setUiSettings(prev => ({ ...prev, [key]: val }));
+        };
+
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 modal-backdrop fade-in">
-            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col">
               <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight">{t.settings}</h2>
                 <button onClick={onClose} className="p-2 -mr-2 text-slate-400">
@@ -318,7 +374,9 @@
                   </svg>
                 </button>
               </div>
+              
               <div className="p-6 flex flex-col gap-6">
+                {/* Language Section */}
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">{t.language}</label>
                   <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
@@ -336,7 +394,78 @@
                     </button>
                   </div>
                 </div>
+
+                {/* UI Customization Section */}
+                <div className="flex flex-col gap-4">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.uiSettings}</label>
+                  
+                  <div className="space-y-4">
+                    {/* Height */}
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.itemHeight}</span>
+                        <span>{uiSettings.itemHeight}px</span>
+                      </div>
+                      <input 
+                        type="range" min="30" max="120" step="2"
+                        value={uiSettings.itemHeight}
+                        onChange={(e) => updateUI('itemHeight', parseInt(e.target.value))}
+                      />
+                    </div>
+
+                    {/* Width */}
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.itemWidth}</span>
+                        <span>{uiSettings.itemWidth}%</span>
+                      </div>
+                      <input 
+                        type="range" min="70" max="100" step="1"
+                        value={uiSettings.itemWidth}
+                        onChange={(e) => updateUI('itemWidth', parseInt(e.target.value))}
+                      />
+                    </div>
+
+                    {/* Spacing */}
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.itemSpacing}</span>
+                        <span>{uiSettings.itemSpacing}px</span>
+                      </div>
+                      <input 
+                        type="range" min="0" max="32" step="2"
+                        value={uiSettings.itemSpacing}
+                        onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))}
+                      />
+                    </div>
+
+                    {/* Colors */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="color-picker-wrapper" style={{ backgroundColor: uiSettings.highlightColor }}>
+                          <input 
+                            type="color" 
+                            value={uiSettings.highlightColor}
+                            onChange={(e) => updateUI('highlightColor', e.target.value)}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="color-picker-wrapper" style={{ backgroundColor: uiSettings.completedColor }}>
+                          <input 
+                            type="color" 
+                            value={uiSettings.completedColor}
+                            onChange={(e) => updateUI('completedColor', e.target.value)}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorCompleted}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
               <div className="px-6 pb-6 pt-2">
                 <button onClick={onClose} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl active:scale-95">{t.close}</button>
               </div>
@@ -435,6 +564,7 @@
         onDragOver, 
         onDragEnd,
         isDragging,
+        uiSettings,
         t
       }) => {
         const [isConfirming, setIsConfirming] = useState(false);
@@ -459,12 +589,26 @@
           }
         };
 
-        const getBgColor = () => {
-          if (record.isCompleted && record.isHighlighted) return 'bg-emerald-200 border-emerald-400 ring-1 ring-emerald-400';
-          if (record.isCompleted) return 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-200';
-          if (record.isHighlighted) return 'bg-slate-100 border-slate-300 ring-1 ring-slate-300';
-          return 'bg-white';
+        const itemStyles = {
+          height: `${uiSettings.itemHeight}px`,
+          width: `${uiSettings.itemWidth}%`,
+          marginBottom: `${uiSettings.itemSpacing}px`,
+          backgroundColor: 'white',
+          borderWidth: '1px',
+          borderColor: '#e2e8f0',
         };
+
+        if (record.isCompleted && record.isHighlighted) {
+           itemStyles.backgroundColor = uiSettings.completedColor;
+           itemStyles.borderColor = uiSettings.highlightColor;
+           itemStyles.boxShadow = `0 0 0 2px ${uiSettings.highlightColor} inset`;
+        } else if (record.isCompleted) {
+           itemStyles.backgroundColor = uiSettings.completedColor;
+           itemStyles.borderColor = '#cbd5e1';
+        } else if (record.isHighlighted) {
+           itemStyles.backgroundColor = uiSettings.highlightColor;
+           itemStyles.borderColor = '#cbd5e1';
+        }
 
         return (
           <div 
@@ -472,7 +616,8 @@
             onDragStart={(e) => onDragStart(e, index)}
             onDragOver={(e) => onDragOver(e, index)}
             onDragEnd={onDragEnd}
-            className={`border border-slate-200 rounded-lg pl-0.5 pr-0.5 flex items-center shadow-sm fade-in mb-3 tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''} ${getBgColor()}`}
+            style={itemStyles}
+            className={`mx-auto rounded-lg pl-0.5 pr-0.5 flex items-center shadow-sm fade-in tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''}`}
           >
             
             <div className="flex items-center drag-handle px-0.5 shrink-0">
@@ -491,7 +636,7 @@
                 onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
                 className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}
               >
-                <svg className="w-3 h-3" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="9" strokeWidth="4" />
                 </svg>
               </button>
@@ -499,13 +644,13 @@
                 onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)}
                 className={`p-0.5 transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}
               >
-                <svg className="w-3 h-3" fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M5 13l4 4L19 7" />
                 </svg>
               </button>
             </div>
 
-            <div className="flex-1 min-w-0 py-0.5 ml-1">
+            <div className="flex-1 min-w-0 py-0.5 ml-1 h-full flex items-center">
               <textarea 
                 ref={textRef}
                 rows="2"
@@ -524,7 +669,7 @@
                   inputMode="numeric"
                   value={record[f] || ''}
                   onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`}
+                  className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`}
                   placeholder="0"
                 />
               ))}
@@ -546,6 +691,19 @@
         const [records, setRecords] = useState([]);
         const [weights, setWeights] = useState({});
         const [language, setLanguage] = useState(localStorage.getItem('gt_lang') || 'ru');
+        
+        // UI Customization State
+        const [uiSettings, setUiSettings] = useState(() => {
+          const saved = localStorage.getItem('gt_ui_settings');
+          return saved ? JSON.parse(saved) : {
+            itemHeight: 48,
+            itemWidth: 100,
+            itemSpacing: 12,
+            highlightColor: '#f1f5f9', // slate-100
+            completedColor: '#ecfdf5', // emerald-50
+          };
+        });
+
         const [viewDate, setViewDate] = useState(new Date());
         const [toast, setToast] = useState({ show: false, message: '' });
         const [isLoaded, setIsLoaded] = useState(false);
@@ -567,6 +725,10 @@
         useEffect(() => {
           localStorage.setItem('gt_lang', language);
         }, [language]);
+
+        useEffect(() => {
+          localStorage.setItem('gt_ui_settings', JSON.stringify(uiSettings));
+        }, [uiSettings]);
 
         useEffect(() => {
           const init = async () => {
@@ -610,7 +772,7 @@
         };
 
         const exportJSON = () => {
-          const dataStr = JSON.stringify({ records, weights, exportedAt: new Date().toISOString() }, null, 2);
+          const dataStr = JSON.stringify({ records, weights, uiSettings, exportedAt: new Date().toISOString() }, null, 2);
           const blob = new Blob([dataStr], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -701,7 +863,15 @@
           <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
             <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
             <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} weights={weights} t={t} />
-            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} language={language} setLanguage={setLanguage} t={t} />
+            <SettingsModal 
+              isOpen={isSettingsOpen} 
+              onClose={() => setIsSettingsOpen(false)} 
+              language={language} 
+              setLanguage={setLanguage} 
+              uiSettings={uiSettings}
+              setUiSettings={setUiSettings}
+              t={t} 
+            />
 
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2">
@@ -734,10 +904,17 @@
               </div>
             </header>
 
-            <main className="px-4 pb-12 pt-1.5 flex flex-col items-start">
+            <main className="px-4 pb-12 pt-1.5 flex flex-col items-start overflow-x-hidden">
               <div className="w-full">
                 {currentRecords.map((r, idx) => (
-                  <TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} t={t} />
+                  <TrackerItem 
+                    key={r.id} record={r} index={idx} 
+                    onDelete={deleteRecord} onUpdate={updateRecord} 
+                    onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} 
+                    isDragging={draggedIdx === idx} 
+                    uiSettings={uiSettings}
+                    t={t} 
+                  />
                 ))}
               </div>
               
