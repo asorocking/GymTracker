@@ -1,6 +1,8 @@
+
 {
   "short_name": "GymTracker",
   "name": "GymTracker Progressive App",
+  "id": "gymtracker-pwa-v1",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/25/25231.png",
@@ -18,7 +20,7 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "theme_color": "#0f172a",
+  "theme_color": "#f8fafc",
   "background_color": "#f8fafc",
   "orientation": "portrait"
 }
