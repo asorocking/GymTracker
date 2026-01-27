@@ -2,22 +2,22 @@
 {
   "short_name": "GymTracker",
   "name": "GymTracker Pro Workout",
-  "id": "gymtracker-pwa-v2",
+  "id": "gymtracker-pwa-v3",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144853.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144853.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144853.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
