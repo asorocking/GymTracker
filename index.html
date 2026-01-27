@@ -182,6 +182,15 @@
         height: 50px;
         cursor: pointer;
       }
+
+      .mode-toggle {
+        cursor: pointer;
+        transition: opacity 0.2s;
+        user-select: none;
+      }
+      .mode-toggle:active {
+        opacity: 0.6;
+      }
     </style>
   </head>
   <body class="antialiased text-slate-900">
@@ -203,6 +212,7 @@
       const i18n = {
         ru: {
           appName: "GymTracker",
+          shopName: "ShopTracker",
           weight: "Вес",
           kg: "кг",
           stats: "Статистика",
@@ -212,10 +222,12 @@
           noData: "Недостаточно данных",
           close: "Закрыть",
           recordPlaceholder: "Запись...",
+          shopPlaceholder: "Купить...",
           savedToast: "Сохранено 💾",
           errorToast: "Ошибка ⚠️",
           exportToast: "Экспорт 📤",
           addExercise: "Добавить упражнение",
+          addItem: "Добавить в список",
           repeatLast: "Повторить прошлую",
           noPastData: "Нет данных 🤷‍♂️",
           copySuccess: "Копия:",
@@ -227,16 +239,20 @@
           russian: "Русский",
           english: "English",
           uiSettings: "Внешний вид",
+          uiSettingsGym: "Вид: Тренировка",
+          uiSettingsShop: "Вид: Магазин",
           itemHeight: "Высота записи",
           itemWidth: "Ширина записи",
           itemSpacing: "Интервал между записями",
           colorHighlight: "Сет",
           colorCompleted: "Готово",
           fontSize: "Размер шрифта",
-          lineCount: "Число строк в записи"
+          lineCount: "Число строк в записи",
+          modeSwitched: "Переключено на "
         },
         en: {
           appName: "GymTracker",
+          shopName: "ShopTracker",
           weight: "Weight",
           kg: "kg",
           stats: "Stats",
@@ -246,10 +262,12 @@
           noData: "Not enough data",
           close: "Close",
           recordPlaceholder: "Record...",
+          shopPlaceholder: "Buy...",
           savedToast: "Saved 💾",
           errorToast: "Error ⚠️",
           exportToast: "Exported 📤",
           addExercise: "Add Exercise",
+          addItem: "Add to List",
           repeatLast: "Repeat previous",
           noPastData: "No data 🤷‍♂️",
           copySuccess: "Copied:",
@@ -261,13 +279,16 @@
           russian: "Russian",
           english: "English",
           uiSettings: "Appearance",
+          uiSettingsGym: "UI: Gym Mode",
+          uiSettingsShop: "UI: Shop Mode",
           itemHeight: "Item Height",
           itemWidth: "Item Width",
           itemSpacing: "Item Spacing",
           colorHighlight: "Set Color",
           colorCompleted: "Done Color",
           fontSize: "Font Size",
-          lineCount: "Number of Lines"
+          lineCount: "Number of Lines",
+          modeSwitched: "Switched to "
         }
       };
 
@@ -360,11 +381,19 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, t }) => {
+      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, t }) => {
         if (!isOpen) return null;
 
+        const currentUISettings = uiSettings[activeMode];
+
         const updateUI = (key, val) => {
-          setUiSettings(prev => ({ ...prev, [key]: val }));
+          setUiSettings(prev => ({
+            ...prev,
+            [activeMode]: {
+              ...prev[activeMode],
+              [key]: val
+            }
+          }));
         };
 
         return (
@@ -401,18 +430,20 @@
 
                 {/* UI Customization Section */}
                 <div className="flex flex-col gap-4">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.uiSettings}</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {activeMode === 'gym' ? t.uiSettingsGym : t.uiSettingsShop}
+                  </label>
                   
                   <div className="space-y-4">
                     {/* Font Size */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.fontSize}</span>
-                        <span>{uiSettings.fontSize}px</span>
+                        <span>{currentUISettings.fontSize}px</span>
                       </div>
                       <input 
                         type="range" min="8" max="24" step="1"
-                        value={uiSettings.fontSize}
+                        value={currentUISettings.fontSize}
                         onChange={(e) => updateUI('fontSize', parseInt(e.target.value))}
                       />
                     </div>
@@ -421,11 +452,11 @@
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.lineCount}</span>
-                        <span>{uiSettings.lineCount}</span>
+                        <span>{currentUISettings.lineCount}</span>
                       </div>
                       <input 
                         type="range" min="1" max="6" step="1"
-                        value={uiSettings.lineCount}
+                        value={currentUISettings.lineCount}
                         onChange={(e) => updateUI('lineCount', parseInt(e.target.value))}
                       />
                     </div>
@@ -434,11 +465,11 @@
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemHeight}</span>
-                        <span>{uiSettings.itemHeight}px</span>
+                        <span>{currentUISettings.itemHeight}px</span>
                       </div>
                       <input 
                         type="range" min="30" max="120" step="2"
-                        value={uiSettings.itemHeight}
+                        value={currentUISettings.itemHeight}
                         onChange={(e) => updateUI('itemHeight', parseInt(e.target.value))}
                       />
                     </div>
@@ -447,11 +478,11 @@
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemWidth}</span>
-                        <span>{uiSettings.itemWidth}%</span>
+                        <span>{currentUISettings.itemWidth}%</span>
                       </div>
                       <input 
                         type="range" min="70" max="100" step="1"
-                        value={uiSettings.itemWidth}
+                        value={currentUISettings.itemWidth}
                         onChange={(e) => updateUI('itemWidth', parseInt(e.target.value))}
                       />
                     </div>
@@ -460,32 +491,34 @@
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemSpacing}</span>
-                        <span>{uiSettings.itemSpacing}px</span>
+                        <span>{currentUISettings.itemSpacing}px</span>
                       </div>
                       <input 
                         type="range" min="0" max="32" step="2"
-                        value={uiSettings.itemSpacing}
+                        value={currentUISettings.itemSpacing}
                         onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))}
                       />
                     </div>
 
                     {/* Colors */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="color-picker-wrapper" style={{ backgroundColor: uiSettings.highlightColor }}>
-                          <input 
-                            type="color" 
-                            value={uiSettings.highlightColor}
-                            onChange={(e) => updateUI('highlightColor', e.target.value)}
-                          />
+                      {activeMode === 'gym' && (
+                        <div className="flex items-center gap-3">
+                          <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}>
+                            <input 
+                              type="color" 
+                              value={currentUISettings.highlightColor}
+                              onChange={(e) => updateUI('highlightColor', e.target.value)}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
-                      </div>
+                      )}
                       <div className="flex items-center gap-3">
-                        <div className="color-picker-wrapper" style={{ backgroundColor: uiSettings.completedColor }}>
+                        <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}>
                           <input 
                             type="color" 
-                            value={uiSettings.completedColor}
+                            value={currentUISettings.completedColor}
                             onChange={(e) => updateUI('completedColor', e.target.value)}
                           />
                         </div>
@@ -595,6 +628,7 @@
         onDragEnd,
         isDragging,
         uiSettings,
+        mode,
         t
       }) => {
         const [isConfirming, setIsConfirming] = useState(false);
@@ -628,14 +662,14 @@
           borderColor: '#e2e8f0',
         };
 
-        if (record.isCompleted && record.isHighlighted) {
+        if (record.isCompleted && record.isHighlighted && mode === 'gym') {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = uiSettings.highlightColor;
            itemStyles.boxShadow = `0 0 0 2px ${uiSettings.highlightColor} inset`;
         } else if (record.isCompleted) {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = '#cbd5e1';
-        } else if (record.isHighlighted) {
+        } else if (record.isHighlighted && mode === 'gym') {
            itemStyles.backgroundColor = uiSettings.highlightColor;
            itemStyles.borderColor = '#cbd5e1';
         }
@@ -662,14 +696,16 @@
             </div>
 
             <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5">
-              <button 
-                onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
-                className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="9" strokeWidth="4" />
-                </svg>
-              </button>
+              {mode === 'gym' && (
+                <button 
+                  onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
+                  className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}
+                >
+                  <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" strokeWidth="4" />
+                  </svg>
+                </button>
+              )}
               <button 
                 onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)}
                 className={`p-0.5 transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}
@@ -686,25 +722,27 @@
                 rows={uiSettings.lineCount || 2}
                 value={record.description}
                 onChange={(e) => onUpdate(record.id, 'description', e.target.value)}
-                placeholder={t.recordPlaceholder}
+                placeholder={mode === 'gym' ? t.recordPlaceholder : t.shopPlaceholder}
                 style={{ fontSize: `${uiSettings.fontSize || 12}px` }}
-                className={`font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-700'}`}
+                className={`font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${(record.isHighlighted && mode === 'gym') || record.isCompleted ? 'text-black' : 'text-slate-700'} ${record.isCompleted ? 'line-through opacity-50' : ''}`}
               />
             </div>
 
-            <div className="flex items-center gap-0.5 shrink-0 px-0.5">
-              {['val1', 'val2', 'val3'].map((f) => (
-                <input 
-                  key={f}
-                  type="text" 
-                  inputMode="numeric"
-                  value={record[f] || ''}
-                  onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`}
-                  placeholder="0"
-                />
-              ))}
-            </div>
+            {mode === 'gym' && (
+              <div className="flex items-center gap-0.5 shrink-0 px-0.5">
+                {['val1', 'val2', 'val3'].map((f) => (
+                  <input 
+                    key={f}
+                    type="text" 
+                    inputMode="numeric"
+                    value={record[f] || ''}
+                    onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 2))}
+                    className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`}
+                    placeholder="0"
+                  />
+                ))}
+              </div>
+            )}
 
             <button 
               onClick={handleDeleteClick}
@@ -722,18 +760,33 @@
         const [records, setRecords] = useState([]);
         const [weights, setWeights] = useState({});
         const [language, setLanguage] = useState(localStorage.getItem('gt_lang') || 'ru');
+        const [mode, setMode] = useState(localStorage.getItem('gt_mode') || 'gym'); // 'gym' or 'shop'
         
         // UI Customization State
         const [uiSettings, setUiSettings] = useState(() => {
-          const saved = localStorage.getItem('gt_ui_settings');
-          return saved ? JSON.parse(saved) : {
-            itemHeight: 48,
-            itemWidth: 100,
-            itemSpacing: 12,
-            highlightColor: '#f1f5f9', // slate-100
-            completedColor: '#ecfdf5', // emerald-50
-            fontSize: 12,
-            lineCount: 2
+          const saved = localStorage.getItem('gt_ui_settings_v2');
+          if (saved) return JSON.parse(saved);
+
+          // Default fallback (v2 with nested modes)
+          return {
+            gym: {
+              itemHeight: 48,
+              itemWidth: 100,
+              itemSpacing: 12,
+              highlightColor: '#f1f5f9',
+              completedColor: '#ecfdf5',
+              fontSize: 12,
+              lineCount: 2
+            },
+            shop: {
+              itemHeight: 40,
+              itemWidth: 95,
+              itemSpacing: 8,
+              highlightColor: '#f1f5f9', // unused but kept for schema consistency
+              completedColor: '#fef2f2', // red-50 for shop
+              fontSize: 14,
+              lineCount: 1
+            }
           };
         });
 
@@ -750,7 +803,11 @@
         const t = useMemo(() => i18n[language], [language]);
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
-        const currentRecords = useMemo(() => records.filter(r => r.dateKey === viewDateKey), [records, viewDateKey]);
+        
+        const currentRecords = useMemo(() => {
+          return records.filter(r => r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')));
+        }, [records, viewDateKey, mode]);
+
         const currentWeight = weights[viewDateKey] || '';
 
         const displayDate = viewDate.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -760,7 +817,11 @@
         }, [language]);
 
         useEffect(() => {
-          localStorage.setItem('gt_ui_settings', JSON.stringify(uiSettings));
+          localStorage.setItem('gt_mode', mode);
+        }, [mode]);
+
+        useEffect(() => {
+          localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings));
         }, [uiSettings]);
 
         useEffect(() => {
@@ -791,6 +852,12 @@
 
         const changeDate = (offset) => { setViewDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + offset); return n; }); };
 
+        const toggleMode = () => {
+          const newMode = mode === 'gym' ? 'shop' : 'gym';
+          setMode(newMode);
+          showToast(`${t.modeSwitched}${newMode === 'gym' ? t.appName : t.shopName}`);
+        };
+
         const handleManualSave = async () => {
           try {
             await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]);
@@ -805,12 +872,12 @@
         };
 
         const exportJSON = () => {
-          const dataStr = JSON.stringify({ records, weights, uiSettings, exportedAt: new Date().toISOString() }, null, 2);
+          const dataStr = JSON.stringify({ records, weights, uiSettings, mode, exportedAt: new Date().toISOString() }, null, 2);
           const blob = new Blob([dataStr], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `gym-export-${new Date().toISOString().split('T')[0]}.json`;
+          link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`;
           link.click();
           URL.revokeObjectURL(url);
           showToast(t.exportToast);
@@ -826,6 +893,7 @@
             isCompleted: false,
             createdAt: Date.now(),
             dateKey: viewDateKey,
+            mode: mode,
             sortOrder: records.length
           };
           setRecords(prev => [...prev, newRecord]);
@@ -833,7 +901,7 @@
 
         const deleteAllForCurrentDay = () => {
           if (isClearConfirming) {
-            setRecords(prev => prev.filter(r => r.dateKey !== viewDateKey));
+            setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')))));
             setIsClearConfirming(false);
             showToast(t.clearedToast);
           } else {
@@ -844,10 +912,11 @@
         };
 
         const copyFromLastWorkout = () => {
-          const pastDates = [...new Set(records.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort();
+          const filteredRecords = records.filter(r => r.mode === mode || (!r.mode && mode === 'gym'));
+          const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort();
           const lastDate = pastDates.pop();
           if (!lastDate) { showToast(t.noPastData); return; }
-          const toCopy = records.filter(r => r.dateKey === lastDate);
+          const toCopy = filteredRecords.filter(r => r.dateKey === lastDate);
           
           const cloned = toCopy.map((r, i) => ({
             ...r,
@@ -860,6 +929,7 @@
             isHighlighted: r.isHighlighted,
             isCompleted: false,
             createdAt: Date.now(),
+            mode: mode,
             sortOrder: records.length + i
           }));
           
@@ -903,21 +973,33 @@
               setLanguage={setLanguage} 
               uiSettings={uiSettings}
               setUiSettings={setUiSettings}
+              activeMode={mode}
               t={t} 
             />
 
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2">
-                <h1 className="text-[17px] font-black text-slate-900 tracking-tight">{t.appName}</h1>
-                <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-2 py-0.5">
-                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{t.weight}</span>
-                   <input type="text" inputMode="decimal" value={currentWeight} onChange={(e) => handleWeightChange(e.target.value)} placeholder="--" className="w-10 bg-transparent border-none text-center text-sm font-black text-slate-900 focus:outline-none placeholder:text-slate-400" />
-                   <span className="text-[9px] font-bold text-slate-400">{t.kg}</span>
-                </div>
+                <h1 
+                  onClick={toggleMode}
+                  className="text-[17px] font-black text-slate-900 tracking-tight mode-toggle hover:scale-105 active:scale-95 transition-transform"
+                >
+                  {mode === 'gym' ? t.appName : t.shopName}
+                </h1>
+                
+                {mode === 'gym' && (
+                  <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-2 py-0.5">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{t.weight}</span>
+                    <input type="text" inputMode="decimal" value={currentWeight} onChange={(e) => handleWeightChange(e.target.value)} placeholder="--" className="w-10 bg-transparent border-none text-center text-sm font-black text-slate-900 focus:outline-none placeholder:text-slate-400" />
+                    <span className="text-[9px] font-bold text-slate-400">{t.kg}</span>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setIsStatsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.stats}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                  </button>
+                  {mode === 'gym' && (
+                    <button onClick={() => setIsStatsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.stats}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    </button>
+                  )}
                   <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   </button>
@@ -945,7 +1027,8 @@
                     onDelete={deleteRecord} onUpdate={updateRecord} 
                     onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} 
                     isDragging={draggedIdx === idx} 
-                    uiSettings={uiSettings}
+                    uiSettings={uiSettings[mode]}
+                    mode={mode}
                     t={t} 
                   />
                 ))}
@@ -965,7 +1048,7 @@
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" />
                   </svg>
-                  <span className="text-sm font-bold">{t.addExercise}</span>
+                  <span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span>
                 </button>
                 
                 {currentRecords.length > 0 && (
