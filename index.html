@@ -231,7 +231,9 @@
           itemWidth: "Ширина записи",
           itemSpacing: "Интервал между записями",
           colorHighlight: "Сет",
-          colorCompleted: "Готово"
+          colorCompleted: "Готово",
+          fontSize: "Размер шрифта",
+          lineCount: "Число строк"
         },
         en: {
           appName: "GymTracker",
@@ -263,7 +265,9 @@
           itemWidth: "Item Width",
           itemSpacing: "Item Spacing",
           colorHighlight: "Set Color",
-          colorCompleted: "Done Color"
+          colorCompleted: "Done Color",
+          fontSize: "Font Size",
+          lineCount: "Number of Lines"
         }
       };
 
@@ -400,6 +404,32 @@
                   <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">{t.uiSettings}</label>
                   
                   <div className="space-y-4">
+                    {/* Font Size */}
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.fontSize}</span>
+                        <span>{uiSettings.fontSize}px</span>
+                      </div>
+                      <input 
+                        type="range" min="8" max="24" step="1"
+                        value={uiSettings.fontSize}
+                        onChange={(e) => updateUI('fontSize', parseInt(e.target.value))}
+                      />
+                    </div>
+
+                    {/* Line Count */}
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.lineCount}</span>
+                        <span>{uiSettings.lineCount}</span>
+                      </div>
+                      <input 
+                        type="range" min="1" max="6" step="1"
+                        value={uiSettings.lineCount}
+                        onChange={(e) => updateUI('lineCount', parseInt(e.target.value))}
+                      />
+                    </div>
+
                     {/* Height */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
@@ -653,11 +683,12 @@
             <div className="flex-1 min-w-0 py-0.5 ml-1 h-full flex items-center">
               <textarea 
                 ref={textRef}
-                rows="2"
+                rows={uiSettings.lineCount || 2}
                 value={record.description}
                 onChange={(e) => onUpdate(record.id, 'description', e.target.value)}
                 placeholder={t.recordPlaceholder}
-                className={`text-[12px] font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-700'}`}
+                style={{ fontSize: `${uiSettings.fontSize || 12}px` }}
+                className={`font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-700'}`}
               />
             </div>
 
@@ -701,6 +732,8 @@
             itemSpacing: 12,
             highlightColor: '#f1f5f9', // slate-100
             completedColor: '#ecfdf5', // emerald-50
+            fontSize: 12,
+            lineCount: 2
           };
         });
 
