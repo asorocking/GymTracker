@@ -57,6 +57,7 @@
       }
 
       .tracker-item {
+        position: relative;
         transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
       }
       
@@ -106,7 +107,7 @@
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        z-index: 100;
+        z-index: 200;
         padding: 12px 20px;
         border-radius: 99px;
         background: #0f172a;
@@ -127,16 +128,31 @@
         @apply p-1 text-slate-500 hover:text-slate-900 transition-all active:scale-125;
       }
 
-      input[type="number"]::-webkit-inner-spin-button,
-      input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-      }
-
       .modal-backdrop {
         background: rgba(15, 23, 42, 0.4);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
+      }
+
+      /* Suggestions Dropdown */
+      .suggestions-list {
+        position: absolute;
+        top: 100%;
+        left: 2rem;
+        right: 2rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        max-height: 180px;
+        overflow-y: auto;
+      }
+
+      .suggestion-item {
+        @apply px-4 py-3 text-sm font-semibold text-slate-700 border-b border-slate-50 last:border-0 active:bg-slate-100;
       }
 
       /* Custom Range Style */
@@ -191,6 +207,14 @@
       .mode-toggle:active {
         opacity: 0.6;
       }
+
+      .custom-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+      }
     </style>
   </head>
   <body class="antialiased text-slate-900">
@@ -219,7 +243,10 @@
           export: "Экспорт",
           import: "Импорт",
           save: "Сохранить",
-          progress: "Прогресс веса",
+          progress: "Статистика",
+          bodyWeight: "Вес тела",
+          exerciseStats: "Упражнения",
+          selectExercise: "Выбрать упражнение",
           noData: "Недостаточно данных",
           close: "Закрыть",
           recordPlaceholder: "Запись...",
@@ -250,7 +277,10 @@
           colorCompleted: "Готово",
           fontSize: "Размер шрифта",
           lineCount: "Число строк в записи",
-          modeSwitched: "Переключено на "
+          modeSwitched: "Переключено на ",
+          exerciseLibrary: "Библиотека упражнений",
+          exerciseEmpty: "Список пуст. Добавьте упражнение на главной.",
+          count: "раз"
         },
         en: {
           appName: "GymTracker",
@@ -261,7 +291,10 @@
           export: "Export",
           import: "Import",
           save: "Save",
-          progress: "Weight Progress",
+          progress: "Statistics",
+          bodyWeight: "Body Weight",
+          exerciseStats: "Exercises",
+          selectExercise: "Select exercise",
           noData: "Not enough data",
           close: "Close",
           recordPlaceholder: "Record...",
@@ -292,7 +325,10 @@
           colorCompleted: "Done Color",
           fontSize: "Font Size",
           lineCount: "Number of Lines",
-          modeSwitched: "Switched to "
+          modeSwitched: "Switched to ",
+          exerciseLibrary: "Exercise Library",
+          exerciseEmpty: "Library is empty. Add exercises on the main screen.",
+          count: "times"
         }
       };
 
@@ -385,7 +421,7 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, t }) => {
+      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, t }) => {
         if (!isOpen) return null;
 
         const currentUISettings = uiSettings[activeMode];
@@ -403,7 +439,7 @@
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 modal-backdrop fade-in">
             <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col">
-              <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
+              <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50 sticky top-0 bg-white z-10">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight">{t.settings}</h2>
                 <button onClick={onClose} className="p-2 -mr-2 text-slate-400">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,7 +448,7 @@
                 </button>
               </div>
               
-              <div className="p-6 flex flex-col gap-6">
+              <div className="p-6 flex flex-col gap-8">
                 {/* Language Section */}
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">{t.language}</label>
@@ -439,101 +475,85 @@
                   </label>
                   
                   <div className="space-y-4">
-                    {/* Font Size */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.fontSize}</span>
                         <span>{currentUISettings.fontSize}px</span>
                       </div>
-                      <input 
-                        type="range" min="8" max="24" step="1"
-                        value={currentUISettings.fontSize}
-                        onChange={(e) => updateUI('fontSize', parseInt(e.target.value))}
-                      />
+                      <input type="range" min="8" max="24" step="1" value={currentUISettings.fontSize} onChange={(e) => updateUI('fontSize', parseInt(e.target.value))} />
                     </div>
-
-                    {/* Line Count */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.lineCount}</span>
                         <span>{currentUISettings.lineCount}</span>
                       </div>
-                      <input 
-                        type="range" min="1" max="6" step="1"
-                        value={currentUISettings.lineCount}
-                        onChange={(e) => updateUI('lineCount', parseInt(e.target.value))}
-                      />
+                      <input type="range" min="1" max="6" step="1" value={currentUISettings.lineCount} onChange={(e) => updateUI('lineCount', parseInt(e.target.value))} />
                     </div>
-
-                    {/* Height */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemHeight}</span>
                         <span>{currentUISettings.itemHeight}px</span>
                       </div>
-                      <input 
-                        type="range" min="30" max="120" step="2"
-                        value={currentUISettings.itemHeight}
-                        onChange={(e) => updateUI('itemHeight', parseInt(e.target.value))}
-                      />
+                      <input type="range" min="30" max="120" step="2" value={currentUISettings.itemHeight} onChange={(e) => updateUI('itemHeight', parseInt(e.target.value))} />
                     </div>
-
-                    {/* Width */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemWidth}</span>
                         <span>{currentUISettings.itemWidth}%</span>
                       </div>
-                      <input 
-                        type="range" min="70" max="100" step="1"
-                        value={currentUISettings.itemWidth}
-                        onChange={(e) => updateUI('itemWidth', parseInt(e.target.value))}
-                      />
+                      <input type="range" min="70" max="100" step="1" value={currentUISettings.itemWidth} onChange={(e) => updateUI('itemWidth', parseInt(e.target.value))} />
                     </div>
-
-                    {/* Spacing */}
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.itemSpacing}</span>
                         <span>{currentUISettings.itemSpacing}px</span>
                       </div>
-                      <input 
-                        type="range" min="0" max="32" step="2"
-                        value={currentUISettings.itemSpacing}
-                        onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))}
-                      />
+                      <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                     </div>
-
-                    {/* Colors */}
                     <div className="grid grid-cols-2 gap-4">
                       {activeMode === 'gym' && (
                         <div className="flex items-center gap-3">
                           <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}>
-                            <input 
-                              type="color" 
-                              value={currentUISettings.highlightColor}
-                              onChange={(e) => updateUI('highlightColor', e.target.value)}
-                            />
+                            <input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} />
                           </div>
                           <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-3">
                         <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}>
-                          <input 
-                            type="color" 
-                            value={currentUISettings.completedColor}
-                            onChange={(e) => updateUI('completedColor', e.target.value)}
-                          />
+                          <input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} />
                         </div>
                         <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorCompleted}</span>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Exercise Library Section */}
+                <div className="flex flex-col gap-3">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {t.exerciseLibrary}
+                  </label>
+                  <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden max-h-[300px] overflow-y-auto">
+                    {knownExercisesWithCount.length > 0 ? (
+                      knownExercisesWithCount.map(({ name, count }) => (
+                        <div key={name} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0">
+                          <span className="text-sm font-bold text-slate-700">{name}</span>
+                          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-black text-slate-500 tabular-nums">
+                            {count} {t.count}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-xs font-bold text-slate-400 italic">
+                        {t.exerciseEmpty}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="px-6 pb-6 pt-2">
+              <div className="px-6 pb-6 pt-2 sticky bottom-0 bg-white">
                 <button onClick={onClose} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl active:scale-95">{t.close}</button>
               </div>
             </div>
@@ -541,62 +561,102 @@
         );
       };
 
-      const StatsModal = ({ isOpen, onClose, weights, t }) => {
+      const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) => {
+        const [activeTab, setActiveTab] = useState('body');
+        const [selectedExercise, setSelectedExercise] = useState('');
         const canvasRef = useRef(null);
         const chartInstance = useRef(null);
 
         useEffect(() => {
+          if (!selectedExercise && knownExercises.length > 0) {
+            setSelectedExercise(knownExercises[0]);
+          }
+        }, [knownExercises]);
+
+        useEffect(() => {
           if (isOpen && canvasRef.current) {
-            const sortedEntries = Object.entries(weights)
-              .filter(([_, val]) => val !== '' && val !== null)
-              .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            let labels = [];
+            let data = [];
+            let labelText = '';
 
-            if (sortedEntries.length === 0) return;
+            if (activeTab === 'body') {
+              const sortedEntries = Object.entries(weights)
+                .filter(([_, val]) => val !== '' && val !== null)
+                .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
-            const labels = sortedEntries.map(([date]) => {
-              const d = new Date(date);
-              return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-            });
-            const data = sortedEntries.map(([_, val]) => parseFloat(val));
+              if (sortedEntries.length > 0) {
+                labels = sortedEntries.map(([date]) => {
+                  const d = new Date(date);
+                  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                });
+                data = sortedEntries.map(([_, val]) => parseFloat(val));
+                labelText = t.weight;
+              }
+            } else {
+              if (selectedExercise) {
+                const exerciseRecords = records.filter(r => r.description.trim() === selectedExercise);
+                const groupedByDate = {};
+                
+                exerciseRecords.forEach(r => {
+                  const vals = [parseFloat(r.val1), parseFloat(r.val2), parseFloat(r.val3)].filter(v => !isNaN(v));
+                  if (vals.length > 0) {
+                    const maxVal = Math.max(...vals);
+                    if (!groupedByDate[r.dateKey] || maxVal > groupedByDate[r.dateKey]) {
+                      groupedByDate[r.dateKey] = maxVal;
+                    }
+                  }
+                });
+
+                const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a) - new Date(b));
+                labels = sortedDates.map(date => {
+                  const d = new Date(date);
+                  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                });
+                data = sortedDates.map(date => groupedByDate[date]);
+                labelText = selectedExercise;
+              }
+            }
 
             if (chartInstance.current) { chartInstance.current.destroy(); }
-
-            const ctx = canvasRef.current.getContext('2d');
-            chartInstance.current = new Chart(ctx, {
-              type: 'line',
-              data: {
-                labels,
-                datasets: [{
-                  label: t.weight,
-                  data,
-                  borderColor: '#0f172a',
-                  backgroundColor: 'rgba(15, 23, 42, 0.05)',
-                  borderWidth: 3,
-                  tension: 0.4,
-                  fill: true,
-                  pointBackgroundColor: '#0f172a',
-                  pointRadius: 4,
-                  pointHoverRadius: 6
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                  y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                  x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            
+            if (data.length > 0) {
+              const ctx = canvasRef.current.getContext('2d');
+              chartInstance.current = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels,
+                  datasets: [{
+                    label: labelText,
+                    data,
+                    borderColor: '#0f172a',
+                    backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#0f172a',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                  }
                 }
-              }
-            });
+              });
+            }
           }
-        }, [isOpen, weights, t]);
+        }, [isOpen, weights, records, activeTab, selectedExercise, t]);
 
         if (!isOpen) return null;
 
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop fade-in">
-            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight">{t.progress}</h2>
                 <button onClick={onClose} className="p-2 -mr-2 text-slate-400">
@@ -605,14 +665,32 @@
                   </svg>
                 </button>
               </div>
-              <div className="p-6 flex-1 min-h-[300px]">
-                {Object.keys(weights).filter(k => weights[k] !== '' && weights[k] !== null).length > 0 ? (
-                  <canvas ref={canvasRef}></canvas>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
-                    <p className="text-sm font-bold uppercase tracking-widest text-center">{t.noData}</p>
+
+              <div className="px-6 pt-4">
+                <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                  <button onClick={() => setActiveTab('body')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'body' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.bodyWeight}</button>
+                  <button onClick={() => setActiveTab('exercises')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'exercises' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.exerciseStats}</button>
+                </div>
+              </div>
+
+              <div className="p-6 flex-1 flex flex-col min-h-[350px]">
+                {activeTab === 'exercises' && (
+                  <div className="mb-4">
+                    <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 custom-select focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                      <option value="" disabled>{t.selectExercise}</option>
+                      {knownExercises.map(ex => (<option key={ex} value={ex}>{ex}</option>))}
+                    </select>
                   </div>
                 )}
+                <div className="flex-1 relative">
+                  {(activeTab === 'body' ? Object.keys(weights).filter(k => weights[k] !== '' && weights[k] !== null).length > 0 : (selectedExercise && records.some(r => r.description.trim() === selectedExercise && (r.val1 || r.val2 || r.val3)))) ? (
+                    <canvas ref={canvasRef}></canvas>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                      <p className="text-sm font-bold uppercase tracking-widest text-center">{t.noData}</p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="px-6 pb-6 pt-2">
                 <button onClick={onClose} className="w-full py-3 bg-slate-100 text-slate-900 font-bold rounded-xl active:scale-95">{t.close}</button>
@@ -622,22 +700,12 @@
         );
       };
 
-      const TrackerItem = ({ 
-        record, 
-        index, 
-        onDelete, 
-        onUpdate, 
-        onDragStart, 
-        onDragOver, 
-        onDragEnd,
-        isDragging,
-        uiSettings,
-        mode,
-        t
-      }) => {
+      const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownExercises, t }) => {
         const [isConfirming, setIsConfirming] = useState(false);
+        const [showSuggestions, setShowSuggestions] = useState(false);
         const textRef = useRef(null);
         const confirmTimeout = useRef(null);
+        const suggestionsRef = useRef(null);
 
         useEffect(() => {
           if (record.isNew && textRef.current) {
@@ -646,14 +714,31 @@
           }
         }, []);
 
+        const filteredSuggestions = useMemo(() => {
+          if (!record.description || record.description.length < 1 || mode !== 'gym') return [];
+          const query = record.description.toLowerCase().trim();
+          return knownExercises.filter(ex => ex.toLowerCase().includes(query) && ex.toLowerCase() !== query).slice(0, 5);
+        }, [record.description, knownExercises, mode]);
+
         const handleDeleteClick = (e) => {
           e.preventDefault();
-          if (isConfirming) {
-            onDelete(record.id);
-          } else {
+          if (isConfirming) { onDelete(record.id); } else {
             setIsConfirming(true);
             if (confirmTimeout.current) clearTimeout(confirmTimeout.current);
             confirmTimeout.current = setTimeout(() => setIsConfirming(false), 3000);
+          }
+        };
+
+        const handleSuggestionClick = (val) => {
+          onUpdate(record.id, 'description', val);
+          setShowSuggestions(false);
+        };
+
+        const handleBlur = () => {
+          setTimeout(() => setShowSuggestions(false), 200);
+          const finalVal = record.description.trim();
+          if (finalVal !== record.description) {
+            onUpdate(record.id, 'description', finalVal);
           }
         };
 
@@ -679,82 +764,31 @@
         }
 
         return (
-          <div 
-            draggable="true"
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={(e) => onDragOver(e, index)}
-            onDragEnd={onDragEnd}
-            style={itemStyles}
-            className={`mx-auto rounded-lg pl-0.5 pr-0.5 flex items-center shadow-sm fade-in tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''}`}
-          >
-            
-            <div className="flex items-center drag-handle px-0.5 shrink-0">
-              <div className="flex flex-col gap-0.5 opacity-20">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex gap-0.5">
-                    <div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div>
-                    <div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div>
-                  </div>
-                ))}
-              </div>
+          <div draggable="true" onDragStart={(e) => onDragStart(e, index)} onDragOver={(e) => onDragOver(e, index)} onDragEnd={onDragEnd} style={itemStyles} className={`mx-auto rounded-lg pl-0.5 pr-0.5 flex items-center shadow-sm fade-in tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''}`}>
+            <div className="flex items-center drag-handle px-0.5 shrink-0 h-full">
+              <div className="flex flex-col gap-0.5 opacity-20">{[1, 2, 3].map(i => (<div key={i} className="flex gap-0.5"><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div></div>))}</div>
             </div>
-
             <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5">
               {mode === 'gym' && (
-                <button 
-                  onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)}
-                  className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}
-                >
-                  <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9" strokeWidth="4" />
-                  </svg>
+                <button onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)} className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="4" /></svg>
                 </button>
               )}
-              <button 
-                onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)}
-                className={`p-0.5 transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}
-              >
-                <svg className="w-3.5 h-3.5" fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M5 13l4 4L19 7" />
-                </svg>
+              <button onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)} className={`p-0.5 transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}>
+                <svg className="w-3.5 h-3.5" fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M5 13l4 4L19 7" /></svg>
               </button>
             </div>
-
-            <div className="flex-1 min-w-0 py-0.5 ml-1 h-full flex items-center">
-              <textarea 
-                ref={textRef}
-                rows={uiSettings.lineCount || 2}
-                value={record.description}
-                onChange={(e) => onUpdate(record.id, 'description', e.target.value)}
-                placeholder={mode === 'gym' ? t.recordPlaceholder : t.shopPlaceholder}
-                style={{ fontSize: `${uiSettings.fontSize || 12}px` }}
-                className={`font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${(record.isHighlighted && mode === 'gym') || record.isCompleted ? 'text-black' : 'text-slate-700'} ${record.isCompleted ? 'line-through opacity-50' : ''}`}
-              />
+            <div className="flex-1 min-w-0 py-0.5 ml-1 h-full flex items-center relative">
+              <textarea ref={textRef} rows={uiSettings.lineCount || 2} value={record.description} onFocus={() => setShowSuggestions(true)} onBlur={handleBlur} onChange={(e) => { onUpdate(record.id, 'description', e.target.value); setShowSuggestions(true); }} placeholder={mode === 'gym' ? t.recordPlaceholder : t.shopPlaceholder} style={{ fontSize: `${uiSettings.fontSize || 12}px` }} className={`font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight ${(record.isHighlighted && mode === 'gym') || record.isCompleted ? 'text-black' : 'text-slate-700'} ${record.isCompleted ? 'line-through opacity-50' : ''}`} />
+              {showSuggestions && filteredSuggestions.length > 0 && (<div className="suggestions-list" ref={suggestionsRef}>{filteredSuggestions.map(s => (<div key={s} onMouseDown={() => handleSuggestionClick(s)} className="suggestion-item">{s}</div>))}</div>)}
             </div>
-
             {mode === 'gym' && (
               <div className="flex items-center gap-0.5 shrink-0 px-0.5">
-                {['val1', 'val2', 'val3'].map((f) => (
-                  <input 
-                    key={f}
-                    type="text" 
-                    inputMode="numeric"
-                    value={record[f] || ''}
-                    onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 2))}
-                    className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`}
-                    placeholder="0"
-                  />
-                ))}
+                {['val1', 'val2', 'val3'].map((f) => (<input key={f} type="text" inputMode="numeric" value={record[f] || ''} onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 3))} className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`} placeholder="0" />))}
               </div>
             )}
-
-            <button 
-              onClick={handleDeleteClick}
-              className={`w-7 h-7 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-900'}`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+            <button onClick={handleDeleteClick} className={`w-7 h-7 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-900'}`}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
           </div>
         );
@@ -764,36 +798,15 @@
         const [records, setRecords] = useState([]);
         const [weights, setWeights] = useState({});
         const [language, setLanguage] = useState(localStorage.getItem('gt_lang') || 'ru');
-        const [mode, setMode] = useState(localStorage.getItem('gt_mode') || 'gym'); // 'gym' or 'shop'
-        
-        // UI Customization State
+        const [mode, setMode] = useState(localStorage.getItem('gt_mode') || 'gym');
         const [uiSettings, setUiSettings] = useState(() => {
           const saved = localStorage.getItem('gt_ui_settings_v2');
           if (saved) return JSON.parse(saved);
-
-          // Default fallback (v2 with nested modes)
           return {
-            gym: {
-              itemHeight: 48,
-              itemWidth: 100,
-              itemSpacing: 12,
-              highlightColor: '#f1f5f9',
-              completedColor: '#ecfdf5',
-              fontSize: 12,
-              lineCount: 2
-            },
-            shop: {
-              itemHeight: 40,
-              itemWidth: 95,
-              itemSpacing: 8,
-              highlightColor: '#f1f5f9', // unused but kept for schema consistency
-              completedColor: '#fef2f2', // red-50 for shop
-              fontSize: 14,
-              lineCount: 1
-            }
+            gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', fontSize: 12, lineCount: 2 },
+            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1 }
           };
         });
-
         const [viewDate, setViewDate] = useState(new Date());
         const [toast, setToast] = useState({ show: false, message: '' });
         const [isLoaded, setIsLoaded] = useState(false);
@@ -806,28 +819,30 @@
         const importFileRef = useRef(null);
 
         const t = useMemo(() => i18n[language], [language]);
-
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
         
+        const knownExercisesWithCount = useMemo(() => {
+          const counts = {};
+          records.filter(r => (r.mode === 'gym' || !r.mode) && r.description.trim() !== '')
+                 .forEach(r => {
+                   const name = r.description.trim();
+                   counts[name] = (counts[name] || 0) + 1;
+                 });
+          return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+        }, [records]);
+
+        const knownExercises = useMemo(() => knownExercisesWithCount.map(i => i.name).sort(), [knownExercisesWithCount]);
+
         const currentRecords = useMemo(() => {
           return records.filter(r => r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')));
         }, [records, viewDateKey, mode]);
 
         const currentWeight = weights[viewDateKey] || '';
-
         const displayDate = viewDate.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-        useEffect(() => {
-          localStorage.setItem('gt_lang', language);
-        }, [language]);
-
-        useEffect(() => {
-          localStorage.setItem('gt_mode', mode);
-        }, [mode]);
-
-        useEffect(() => {
-          localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings));
-        }, [uiSettings]);
+        useEffect(() => { localStorage.setItem('gt_lang', language); }, [language]);
+        useEffect(() => { localStorage.setItem('gt_mode', mode); }, [mode]);
+        useEffect(() => { localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings)); }, [uiSettings]);
 
         useEffect(() => {
           const init = async () => {
@@ -845,159 +860,24 @@
         }, []);
 
         useEffect(() => {
-          if (isLoaded && !isDraggingInProgress) {
-            saveToDB(records).catch(console.error);
-          }
+          if (isLoaded && !isDraggingInProgress) { saveToDB(records).catch(console.error); }
         }, [records, isLoaded, isDraggingInProgress]);
 
-        const showToast = (message) => {
-          setToast({ show: true, message });
-          setTimeout(() => setToast({ show: false, message: '' }), 3000);
-        };
-
+        const showToast = (message) => { setToast({ show: true, message }); setTimeout(() => setToast({ show: false, message: '' }), 3000); };
         const changeDate = (offset) => { setViewDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + offset); return n; }); };
-
-        const toggleMode = () => {
-          const newMode = mode === 'gym' ? 'shop' : 'gym';
-          setMode(newMode);
-          showToast(`${t.modeSwitched}${newMode === 'gym' ? t.appName : t.shopName}`);
-        };
-
-        const handleManualSave = async () => {
-          try {
-            await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]);
-            showToast(t.savedToast);
-          } catch (err) { showToast(t.errorToast); }
-        };
-
-        const handleWeightChange = (val) => {
-          const cleaned = val.replace(/[^0-9.]/g, '');
-          setWeights(prev => ({ ...prev, [viewDateKey]: cleaned }));
-          saveWeightToDB(viewDateKey, cleaned).catch(console.error);
-        };
-
-        const exportJSON = () => {
-          const dataStr = JSON.stringify({ records, weights, uiSettings, mode, exportedAt: new Date().toISOString() }, null, 2);
-          const blob = new Blob([dataStr], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`;
-          link.click();
-          URL.revokeObjectURL(url);
-          showToast(t.exportToast);
-        };
-
-        const importJSON = (event) => {
-          const file = event.target.files[0];
-          if (!file) return;
-
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            try {
-              const data = JSON.parse(e.target.result);
-              if (data.records) setRecords(data.records);
-              if (data.weights) setWeights(data.weights);
-              if (data.uiSettings) setUiSettings(data.uiSettings);
-              if (data.mode) setMode(data.mode);
-
-              // Force saving to DB after state updates
-              if (data.records) await saveToDB(data.records);
-              if (data.weights) {
-                for (const [dk, w] of Object.entries(data.weights)) {
-                   await saveWeightToDB(dk, w);
-                }
-              }
-              
-              showToast(t.importToast);
-              event.target.value = ''; // Reset input
-            } catch (err) {
-              console.error(err);
-              showToast(t.errorToast);
-            }
-          };
-          reader.readAsText(file);
-        };
-
-        const triggerImport = () => {
-          importFileRef.current.click();
-        };
-
-        const addNewRecord = () => {
-          const newRecord = {
-            id: String(Date.now() + Math.random()),
-            description: '',
-            val1: '', val2: '', val3: '',
-            isNew: true,
-            isHighlighted: false,
-            isCompleted: false,
-            createdAt: Date.now(),
-            dateKey: viewDateKey,
-            mode: mode,
-            sortOrder: records.length
-          };
-          setRecords(prev => [...prev, newRecord]);
-        };
-
-        const deleteAllForCurrentDay = () => {
-          if (isClearConfirming) {
-            setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')))));
-            setIsClearConfirming(false);
-            showToast(t.clearedToast);
-          } else {
-            setIsClearConfirming(true);
-            if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current);
-            clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000);
-          }
-        };
-
-        const copyFromLastWorkout = () => {
-          const filteredRecords = records.filter(r => r.mode === mode || (!r.mode && mode === 'gym'));
-          const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort();
-          const lastDate = pastDates.pop();
-          if (!lastDate) { showToast(t.noPastData); return; }
-          const toCopy = filteredRecords.filter(r => r.dateKey === lastDate);
-          
-          const cloned = toCopy.map((r, i) => ({
-            ...r,
-            id: String(Date.now() + Math.random() + i),
-            dateKey: viewDateKey,
-            val1: '', 
-            val2: '', 
-            val3: '',
-            isNew: false,
-            isHighlighted: r.isHighlighted,
-            isCompleted: false,
-            createdAt: Date.now(),
-            mode: mode,
-            sortOrder: records.length + i
-          }));
-          
-          setRecords(prev => [...prev, ...cloned]);
-          showToast(`${t.copySuccess} ${lastDate} 📋`);
-        };
-
+        const toggleMode = () => { const newMode = mode === 'gym' ? 'shop' : 'gym'; setMode(newMode); showToast(`${t.modeSwitched}${newMode === 'gym' ? t.appName : t.shopName}`); };
+        const handleManualSave = async () => { try { await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]); showToast(t.savedToast); } catch (err) { showToast(t.errorToast); } };
+        const handleWeightChange = (val) => { const cleaned = val.replace(/[^0-9.]/g, ''); setWeights(prev => ({ ...prev, [viewDateKey]: cleaned })); saveWeightToDB(viewDateKey, cleaned).catch(console.error); };
+        const exportJSON = () => { const dataStr = JSON.stringify({ records, weights, uiSettings, mode, exportedAt: new Date().toISOString() }, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(url); showToast(t.exportToast); };
+        const importJSON = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); if (data.records) setRecords(data.records); if (data.weights) setWeights(data.weights); if (data.uiSettings) setUiSettings(data.uiSettings); if (data.mode) setMode(data.mode); if (data.records) await saveToDB(data.records); if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } showToast(t.importToast); event.target.value = ''; } catch (err) { showToast(t.errorToast); } }; reader.readAsText(file); };
+        const triggerImport = () => { importFileRef.current.click(); };
+        const addNewRecord = () => { const newRecord = { id: String(Date.now() + Math.random()), description: '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: viewDateKey, mode: mode, sortOrder: records.length }; setRecords(prev => [...prev, newRecord]); };
+        const deleteAllForCurrentDay = () => { if (isClearConfirming) { setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym'))))); setIsClearConfirming(false); showToast(t.clearedToast); } else { setIsClearConfirming(true); if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000); } };
+        const copyFromLastWorkout = () => { const filteredRecords = records.filter(r => r.mode === mode || (!r.mode && mode === 'gym')); const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort(); const lastDate = pastDates.pop(); if (!lastDate) { showToast(t.noPastData); return; } const toCopy = filteredRecords.filter(r => r.dateKey === lastDate); const cloned = toCopy.map((r, i) => ({ ...r, id: String(Date.now() + Math.random() + i), dateKey: viewDateKey, val1: '', val2: '', val3: '', isNew: false, isHighlighted: r.isHighlighted, isCompleted: false, createdAt: Date.now(), mode: mode, sortOrder: records.length + i })); setRecords(prev => [...prev, ...cloned]); showToast(`${t.copySuccess} ${lastDate} 📋`); };
         const updateRecord = (id, field, value) => { setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r)); };
         const deleteRecord = (id) => { setRecords(prev => prev.filter(r => r.id !== id)); };
-
         const handleDragStart = (e, index) => { setDraggedIdx(index); setIsDraggingInProgress(true); };
-        const handleDragOver = (e, index) => {
-          e.preventDefault();
-          if (draggedIdx === null || draggedIdx === index) return;
-          const itemMoving = currentRecords[draggedIdx];
-          const targetItem = currentRecords[index];
-          setRecords(prev => {
-            const next = [...prev];
-            const idxM = next.findIndex(r => r.id === itemMoving.id);
-            const idxT = next.findIndex(r => r.id === targetItem.id);
-            if (idxM === -1 || idxT === -1) return prev;
-            const updated = [...next];
-            const [removed] = updated.splice(idxM, 1);
-            updated.splice(idxT, 0, removed);
-            return updated;
-          });
-          setDraggedIdx(index);
-        };
+        const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIdx === null || draggedIdx === index) return; const itemMoving = currentRecords[draggedIdx]; const targetItem = currentRecords[index]; setRecords(prev => { const next = [...prev]; const idxM = next.findIndex(r => r.id === itemMoving.id); const idxT = next.findIndex(r => r.id === targetItem.id); if (idxM === -1 || idxT === -1) return prev; const updated = [...next]; const [removed] = updated.splice(idxM, 1); updated.splice(idxT, 0, removed); return updated; }); setDraggedIdx(index); };
         const handleDragEnd = () => { setDraggedIdx(null); setIsDraggingInProgress(false); };
 
         if (!isLoaded) return null;
@@ -1005,27 +885,12 @@
         return (
           <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
             <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
-            <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} weights={weights} t={t} />
-            <SettingsModal 
-              isOpen={isSettingsOpen} 
-              onClose={() => setIsSettingsOpen(false)} 
-              language={language} 
-              setLanguage={setLanguage} 
-              uiSettings={uiSettings}
-              setUiSettings={setUiSettings}
-              activeMode={mode}
-              t={t} 
-            />
+            <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} weights={weights} records={records} knownExercises={knownExercises} t={t} />
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} language={language} setLanguage={setLanguage} uiSettings={uiSettings} setUiSettings={setUiSettings} activeMode={mode} knownExercisesWithCount={knownExercisesWithCount} t={t} />
 
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2">
-                <h1 
-                  onClick={toggleMode}
-                  className="text-[17px] font-black text-slate-900 tracking-tight mode-toggle hover:scale-105 active:scale-95 transition-transform"
-                >
-                  {mode === 'gym' ? t.appName : t.shopName}
-                </h1>
-                
+                <h1 onClick={toggleMode} className="text-[17px] font-black text-slate-900 tracking-tight mode-toggle hover:scale-105 active:scale-95 transition-transform">{mode === 'gym' ? t.appName : t.shopName}</h1>
                 {mode === 'gym' && (
                   <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-2 py-0.5">
                     <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">{t.weight}</span>
@@ -1033,29 +898,15 @@
                     <span className="text-[9px] font-bold text-slate-400">{t.kg}</span>
                   </div>
                 )}
-
                 <div className="flex items-center gap-2">
-                  {mode === 'gym' && (
-                    <button onClick={() => setIsStatsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.stats}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                    </button>
-                  )}
-                  <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                  </button>
+                  {mode === 'gym' && (<button onClick={() => setIsStatsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.stats}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg></button>)}
+                  <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
                   <input type="file" ref={importFileRef} onChange={importJSON} accept=".json" className="hidden" />
-                  <button onClick={triggerImport} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.import}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8" /></svg>
-                  </button>
-                  <button onClick={exportJSON} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.export}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 8l4 4m0 0l4-4m-4 4V4" /></svg>
-                  </button>
-                  <button onClick={handleManualSave} className="p-1 text-slate-900 hover:text-slate-900 active:scale-125 transition-transform" title={t.save}>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                  </button>
+                  <button onClick={triggerImport} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.import}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8" /></svg></button>
+                  <button onClick={exportJSON} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.export}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 8l4 4m0 0l4-4m-4 4V4" /></svg></button>
+                  <button onClick={handleManualSave} className="p-1 text-slate-900 hover:text-slate-900 active:scale-125 transition-transform" title={t.save}><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
                 </div>
               </div>
-
               <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm">
                 <button onClick={() => changeDate(-1)} className="nav-btn"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg></button>
                 <div onClick={() => setViewDate(new Date())} className="flex items-center cursor-pointer py-1"><span className="text-xs font-black text-slate-900 tabular-nums">{displayDate}</span></div>
@@ -1063,54 +914,19 @@
               </div>
             </header>
 
-            <main className="px-4 pb-12 pt-1.5 flex flex-col items-start overflow-x-hidden">
+            <main className="px-4 pb-12 pt-1.5 flex flex-col items-start">
               <div className="w-full">
-                {currentRecords.map((r, idx) => (
-                  <TrackerItem 
-                    key={r.id} record={r} index={idx} 
-                    onDelete={deleteRecord} onUpdate={updateRecord} 
-                    onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} 
-                    isDragging={draggedIdx === idx} 
-                    uiSettings={uiSettings[mode]}
-                    mode={mode}
-                    t={t} 
-                  />
-                ))}
+                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownExercises={knownExercises} t={t} />))}
               </div>
-              
               {currentRecords.length === 0 && (
                 <div className="w-full py-12 flex flex-col items-center justify-center gap-6">
                   <button onClick={copyFromLastWorkout} className="secondary-button"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>{t.repeatLast}</button>
                 </div>
               )}
-
               <div className="flex flex-col gap-3 mt-1.5 ml-1 w-full pr-1">
-                <button 
-                  onClick={addNewRecord} 
-                  className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" />
-                  </svg>
-                  <span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span>
-                </button>
-                
+                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span></button>
                 {currentRecords.length > 0 && (
-                  <button 
-                    onClick={deleteAllForCurrentDay} 
-                    className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {isClearConfirming ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      )}
-                    </svg>
-                    <span className="text-xs font-bold uppercase tracking-wider">
-                      {isClearConfirming ? t.clearConfirm : t.clearBtn}
-                    </span>
-                  </button>
+                  <button onClick={deleteAllForCurrentDay} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>
                 )}
               </div>
             </main>
