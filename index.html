@@ -161,9 +161,11 @@
       };
 
       const saveToDB = async (records) => {
+        if (!records) return;
         const db = await initDB();
         const tx = db.transaction(STORE_RECORDS, 'readwrite');
         const store = tx.objectStore(STORE_RECORDS);
+        
         return new Promise((resolve, reject) => {
           const clearReq = store.clear();
           clearReq.onsuccess = () => {
@@ -171,10 +173,12 @@
               resolve();
               return;
             }
+            // Сохраняем все записи, обновляя sortOrder на основе текущего индекса в массиве
             records.forEach((r, index) => {
               store.put({ ...r, sortOrder: index });
             });
             tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
           };
           clearReq.onerror = () => reject(clearReq.error);
         });
@@ -187,8 +191,10 @@
         return new Promise((resolve) => {
           const request = store.getAll();
           request.onsuccess = () => {
-            const sorted = (request.result || []).sort((a, b) => 
-              (a.sortOrder || 0) - (b.sortOrder || 0)
+            const results = request.result || [];
+            // Сортируем при загрузке по sortOrder, чтобы сохранить порядок
+            const sorted = results.sort((a, b) => 
+              (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
             );
             resolve(sorted);
           };
@@ -234,7 +240,7 @@
         useEffect(() => {
           if (isOpen && canvasRef.current) {
             const sortedEntries = Object.entries(weights)
-              .filter(([_, val]) => val !== '')
+              .filter(([_, val]) => val !== '' && val !== null)
               .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
             if (sortedEntries.length === 0) return;
@@ -312,7 +318,7 @@
               </div>
               
               <div className="p-6 flex-1 min-h-[300px]">
-                {Object.keys(weights).filter(k => weights[k] !== '').length > 0 ? (
+                {Object.keys(weights).filter(k => weights[k] !== '' && weights[k] !== null).length > 0 ? (
                   <canvas ref={canvasRef}></canvas>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
@@ -451,6 +457,7 @@
         const [isLoaded, setIsLoaded] = useState(false);
         const [isStatsOpen, setIsStatsOpen] = useState(false);
         const [draggedIdx, setDraggedIdx] = useState(null);
+        const [isDraggingInProgress, setIsDraggingInProgress] = useState(false);
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
         
@@ -467,6 +474,7 @@
           year: '2-digit'
         });
 
+        // Загрузка данных при старте
         useEffect(() => {
           const init = async () => {
             try {
@@ -474,7 +482,8 @@
                 loadFromDB(),
                 loadWeightsFromDB()
               ]);
-              if (savedRecords && savedRecords.length > 0) {
+              if (savedRecords) {
+                // Убеждаемся, что у всех записей есть dateKey
                 const updated = savedRecords.map(r => r.dateKey ? r : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) });
                 setRecords(updated);
               }
@@ -490,11 +499,13 @@
           init();
         }, []);
 
+        // Авто-сохранение записей
         useEffect(() => {
-          if (isLoaded) {
+          // Сохраняем только когда данные загружены и пользователь не находится в процессе перетаскивания
+          if (isLoaded && !isDraggingInProgress) {
             saveToDB(records).catch(err => console.error("Auto-save records failed", err));
           }
-        }, [records, isLoaded]);
+        }, [records, isLoaded, isDraggingInProgress]);
 
         const showToast = (message) => {
           setToast({ show: true, message });
@@ -560,7 +571,8 @@
             isNew: true,
             isHighlighted: false,
             createdAt: Date.now(),
-            dateKey: viewDateKey
+            dateKey: viewDateKey,
+            sortOrder: records.length // Устанавливаем порядок в конец общего списка
           };
           setRecords(prev => [...prev, newRecord]);
         };
@@ -584,13 +596,14 @@
             return;
           }
 
-          const newClonedRecords = recordsToCopy.map(r => ({
+          const newClonedRecords = recordsToCopy.map((r, i) => ({
             ...r,
-            id: String(Date.now() + Math.random() + Math.random()),
+            id: String(Date.now() + Math.random() + i),
             dateKey: viewDateKey,
             isNew: false,
             isHighlighted: r.isHighlighted,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            sortOrder: records.length + i
           }));
 
           setRecords(prev => [...prev, ...newClonedRecords]);
@@ -605,8 +618,10 @@
           setRecords(prev => prev.filter(r => r.id !== id));
         };
 
+        // Логика Drag and Drop
         const handleDragStart = (e, index) => {
           setDraggedIdx(index);
+          setIsDraggingInProgress(true);
           e.dataTransfer.effectAllowed = "move";
         };
 
@@ -622,16 +637,22 @@
             const idxGlobalMoving = nextRecords.findIndex(r => r.id === itemMoving.id);
             const idxGlobalTarget = nextRecords.findIndex(r => r.id === targetItem.id);
             
-            [nextRecords[idxGlobalMoving], nextRecords[idxGlobalTarget]] = 
-            [nextRecords[idxGlobalTarget], nextRecords[idxGlobalMoving]];
+            if (idxGlobalMoving === -1 || idxGlobalTarget === -1) return prev;
+
+            // Меняем местами элементы в глобальном массиве для сохранения порядка
+            const updated = [...nextRecords];
+            const [removed] = updated.splice(idxGlobalMoving, 1);
+            updated.splice(idxGlobalTarget, 0, removed);
             
-            return nextRecords;
+            return updated;
           });
           setDraggedIdx(index);
         };
 
         const handleDragEnd = () => {
           setDraggedIdx(null);
+          setIsDraggingInProgress(false);
+          // Сохранение в DB произойдет автоматически через useEffect, когда isDraggingInProgress станет false
         };
 
         if (!isLoaded) return null;
