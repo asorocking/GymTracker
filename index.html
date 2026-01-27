@@ -137,17 +137,17 @@
       /* Suggestions Dropdown */
       .suggestions-list {
         position: absolute;
-        top: 100%;
-        left: 2rem;
-        right: 2rem;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         border: 1px solid #e2e8f0;
         border-radius: 12px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        z-index: 100;
-        max-height: 180px;
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15), 0 5px 15px -5px rgba(0, 0, 0, 0.1);
+        z-index: 500;
+        max-height: 200px;
         overflow-y: auto;
       }
 
@@ -279,7 +279,8 @@
           lineCount: "Число строк в записи",
           modeSwitched: "Переключено на ",
           exerciseLibrary: "Библиотека упражнений",
-          exerciseEmpty: "Список пуст. Добавьте упражнение на главной.",
+          shopLibrary: "Библиотека товаров",
+          libraryEmpty: "Список пуст. Добавьте запись на главной.",
           count: "раз"
         },
         en: {
@@ -327,7 +328,8 @@
           lineCount: "Number of Lines",
           modeSwitched: "Switched to ",
           exerciseLibrary: "Exercise Library",
-          exerciseEmpty: "Library is empty. Add exercises on the main screen.",
+          shopLibrary: "Shop Library",
+          libraryEmpty: "Library is empty. Add items on the main screen.",
           count: "times"
         }
       };
@@ -421,7 +423,7 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, t }) => {
+      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, knownShopItemsWithCount, t }) => {
         if (!isOpen) return null;
 
         const currentUISettings = uiSettings[activeMode];
@@ -435,6 +437,9 @@
             }
           }));
         };
+
+        const currentLibrary = activeMode === 'gym' ? knownExercisesWithCount : knownShopItemsWithCount;
+        const libraryTitle = activeMode === 'gym' ? t.exerciseLibrary : t.shopLibrary;
 
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 modal-backdrop fade-in">
@@ -529,14 +534,14 @@
                   </div>
                 </div>
 
-                {/* Exercise Library Section */}
+                {/* Library Section */}
                 <div className="flex flex-col gap-3">
                   <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    {t.exerciseLibrary}
+                    {libraryTitle}
                   </label>
                   <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden max-h-[300px] overflow-y-auto">
-                    {knownExercisesWithCount.length > 0 ? (
-                      knownExercisesWithCount.map(({ name, count }) => (
+                    {currentLibrary.length > 0 ? (
+                      currentLibrary.map(({ name, count }) => (
                         <div key={name} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0">
                           <span className="text-sm font-bold text-slate-700">{name}</span>
                           <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-black text-slate-500 tabular-nums">
@@ -546,7 +551,7 @@
                       ))
                     ) : (
                       <div className="p-8 text-center text-xs font-bold text-slate-400 italic">
-                        {t.exerciseEmpty}
+                        {t.libraryEmpty}
                       </div>
                     )}
                   </div>
@@ -700,7 +705,7 @@
         );
       };
 
-      const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownExercises, t }) => {
+      const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownExercises, knownShopItems, t }) => {
         const [isConfirming, setIsConfirming] = useState(false);
         const [showSuggestions, setShowSuggestions] = useState(false);
         const textRef = useRef(null);
@@ -714,11 +719,13 @@
           }
         }, []);
 
+        const currentKnownList = mode === 'gym' ? knownExercises : knownShopItems;
+
         const filteredSuggestions = useMemo(() => {
-          if (!record.description || record.description.length < 1 || mode !== 'gym') return [];
+          if (!record.description || record.description.length < 1) return [];
           const query = record.description.toLowerCase().trim();
-          return knownExercises.filter(ex => ex.toLowerCase().includes(query) && ex.toLowerCase() !== query).slice(0, 5);
-        }, [record.description, knownExercises, mode]);
+          return currentKnownList.filter(item => item.toLowerCase().includes(query) && item.toLowerCase() !== query).slice(0, 5);
+        }, [record.description, currentKnownList]);
 
         const handleDeleteClick = (e) => {
           e.preventDefault();
@@ -749,6 +756,8 @@
           backgroundColor: 'white',
           borderWidth: '1px',
           borderColor: '#e2e8f0',
+          zIndex: (showSuggestions && filteredSuggestions.length > 0) ? 50 : 1,
+          position: 'relative'
         };
 
         if (record.isCompleted && record.isHighlighted && mode === 'gym') {
@@ -831,7 +840,18 @@
           return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
         }, [records]);
 
+        const knownShopItemsWithCount = useMemo(() => {
+          const counts = {};
+          records.filter(r => r.mode === 'shop' && r.description.trim() !== '')
+                 .forEach(r => {
+                   const name = r.description.trim();
+                   counts[name] = (counts[name] || 0) + 1;
+                 });
+          return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+        }, [records]);
+
         const knownExercises = useMemo(() => knownExercisesWithCount.map(i => i.name).sort(), [knownExercisesWithCount]);
+        const knownShopItems = useMemo(() => knownShopItemsWithCount.map(i => i.name).sort(), [knownShopItemsWithCount]);
 
         const currentRecords = useMemo(() => {
           return records.filter(r => r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')));
@@ -886,7 +906,18 @@
           <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
             <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
             <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} weights={weights} records={records} knownExercises={knownExercises} t={t} />
-            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} language={language} setLanguage={setLanguage} uiSettings={uiSettings} setUiSettings={setUiSettings} activeMode={mode} knownExercisesWithCount={knownExercisesWithCount} t={t} />
+            <SettingsModal 
+                isOpen={isSettingsOpen} 
+                onClose={() => setIsSettingsOpen(false)} 
+                language={language} 
+                setLanguage={setLanguage} 
+                uiSettings={uiSettings} 
+                setUiSettings={setUiSettings} 
+                activeMode={mode} 
+                knownExercisesWithCount={knownExercisesWithCount} 
+                knownShopItemsWithCount={knownShopItemsWithCount}
+                t={t} 
+            />
 
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2">
@@ -916,7 +947,24 @@
 
             <main className="px-4 pb-12 pt-1.5 flex flex-col items-start">
               <div className="w-full">
-                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownExercises={knownExercises} t={t} />))}
+                {currentRecords.map((r, idx) => (
+                    <TrackerItem 
+                        key={r.id} 
+                        record={r} 
+                        index={idx} 
+                        onDelete={deleteRecord} 
+                        onUpdate={updateRecord} 
+                        onDragStart={handleDragStart} 
+                        onDragOver={handleDragOver} 
+                        onDragEnd={handleDragEnd} 
+                        isDragging={draggedIdx === idx} 
+                        uiSettings={uiSettings[mode]} 
+                        mode={mode} 
+                        knownExercises={knownExercises} 
+                        knownShopItems={knownShopItems}
+                        t={t} 
+                    />
+                ))}
               </div>
               {currentRecords.length === 0 && (
                 <div className="w-full py-12 flex flex-col items-center justify-center gap-6">
