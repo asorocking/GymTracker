@@ -171,7 +171,9 @@
               resolve();
               return;
             }
-            records.forEach(r => store.put(r));
+            records.forEach((r, index) => {
+              store.put({ ...r, sortOrder: index });
+            });
             tx.oncomplete = () => resolve();
           };
           clearReq.onerror = () => reject(clearReq.error);
@@ -184,7 +186,12 @@
         const store = tx.objectStore(STORE_RECORDS);
         return new Promise((resolve) => {
           const request = store.getAll();
-          request.onsuccess = () => resolve(request.result);
+          request.onsuccess = () => {
+            const sorted = (request.result || []).sort((a, b) => 
+              (a.sortOrder || 0) - (b.sortOrder || 0)
+            );
+            resolve(sorted);
+          };
         });
       };
 
@@ -460,7 +467,6 @@
           year: '2-digit'
         });
 
-        // Load data on start
         useEffect(() => {
           const init = async () => {
             try {
@@ -484,7 +490,6 @@
           init();
         }, []);
 
-        // Auto-save on every change after initial load
         useEffect(() => {
           if (isLoaded) {
             saveToDB(records).catch(err => console.error("Auto-save records failed", err));
@@ -561,7 +566,6 @@
         };
 
         const copyFromLastWorkout = () => {
-          // Находим все уникальные даты, где есть записи, и которые раньше текущей даты
           const pastDates = [...new Set(records.map(r => r.dateKey))]
             .filter(dk => dk < viewDateKey)
             .sort();
@@ -585,7 +589,7 @@
             id: String(Date.now() + Math.random() + Math.random()),
             dateKey: viewDateKey,
             isNew: false,
-            isHighlighted: r.isHighlighted, // Исправлено: копируем статус выделения
+            isHighlighted: r.isHighlighted,
             createdAt: Date.now()
           }));
 
@@ -601,7 +605,6 @@
           setRecords(prev => prev.filter(r => r.id !== id));
         };
 
-        // Drag and Drop Logic
         const handleDragStart = (e, index) => {
           setDraggedIdx(index);
           e.dataTransfer.effectAllowed = "move";
@@ -619,7 +622,6 @@
             const idxGlobalMoving = nextRecords.findIndex(r => r.id === itemMoving.id);
             const idxGlobalTarget = nextRecords.findIndex(r => r.id === targetItem.id);
             
-            // Swap in the global array
             [nextRecords[idxGlobalMoving], nextRecords[idxGlobalTarget]] = 
             [nextRecords[idxGlobalTarget], nextRecords[idxGlobalMoving]];
             
@@ -666,15 +668,6 @@
                 </div>
                 
                 <div className="flex items-center gap-0.5 flex-none">
-                  <button 
-                    onClick={copyFromLastWorkout}
-                    title="Копировать из прошлой тренировки"
-                    className="p-1.5 text-slate-400 active:scale-90 hover:text-slate-600 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                    </svg>
-                  </button>
                   <button 
                     onClick={() => setIsStatsOpen(true)}
                     title="Статистика веса"
@@ -762,7 +755,6 @@
                 </div>
               )}
 
-              {/* Кнопка добавления: всегда слева под записями */}
               <button 
                 onClick={addNewRecord}
                 className="add-button-inline mt-2 mb-8 ml-2 w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center transform-gpu shadow-lg hover:bg-black"
