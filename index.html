@@ -134,25 +134,46 @@
         -webkit-backdrop-filter: blur(8px);
       }
 
-      /* Suggestions Dropdown */
+      /* Suggestions Dropdown Improvements */
       .suggestions-list {
         position: absolute;
-        top: calc(100% + 4px);
+        top: calc(100% + 8px);
         left: 0;
         right: 0;
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15), 0 5px 15px -5px rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 18px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.02);
         z-index: 500;
-        max-height: 200px;
+        max-height: 240px;
         overflow-y: auto;
+        padding: 6px;
+        animation: suggestionsIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transform-origin: top center;
+      }
+
+      @keyframes suggestionsIn {
+        from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
 
       .suggestion-item {
-        @apply px-4 py-3 text-sm font-semibold text-slate-700 border-b border-slate-50 last:border-0 active:bg-slate-100;
+        @apply px-4 py-2.5 text-[13px] font-bold text-slate-600 rounded-[12px] transition-all cursor-pointer;
+        display: flex;
+        align-items: center;
+        margin-bottom: 2px;
+        border: 1px solid transparent;
+      }
+      
+      .suggestion-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .suggestion-item:active {
+        @apply bg-slate-100 text-slate-900 border-slate-200/50;
+        transform: scale(0.98);
       }
 
       /* Custom Range Style */
@@ -280,14 +301,17 @@
           modeSwitched: "Переключено на ",
           exerciseLibrary: "Библиотека упражнений",
           shopLibrary: "Библиотека товаров",
-          libraryEmpty: "Список пуст. Добавьте запись на главной.",
+          libraryEmpty: "Список пуст. Добавьте запись.",
           count: "раз",
           start: "Начать",
           finish: "Закончить",
           workoutTime: "Время тренировки",
           listNameLabel: "Название",
           defaultListName: "Новый список",
-          deleteEmptyLists: "Очистить пустые списки"
+          deleteEmptyLists: "Очистить пустые списки",
+          addItemToLibrary: "Добавить в библиотеку",
+          editItemPlaceholder: "Название...",
+          alreadyExists: "Уже в списке!"
         },
         en: {
           appName: "GymTracker",
@@ -335,14 +359,17 @@
           modeSwitched: "Switched to ",
           exerciseLibrary: "Exercise Library",
           shopLibrary: "Shop Library",
-          libraryEmpty: "Library is empty. Add items on the main screen.",
+          libraryEmpty: "Library is empty. Add items.",
           count: "times",
           start: "Start",
           finish: "Finish",
           workoutTime: "Workout Time",
           listNameLabel: "List Name",
           defaultListName: "New List",
-          deleteEmptyLists: "Clear empty lists"
+          deleteEmptyLists: "Clear empty lists",
+          addItemToLibrary: "Add to library",
+          editItemPlaceholder: "Name...",
+          alreadyExists: "Already exists!"
         }
       };
 
@@ -467,7 +494,65 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, knownShopItemsWithCount, clearRegistry, t }) => {
+      const LibraryEditor = ({ items, onAdd, onDelete, onEdit, t, placeholder }) => {
+        const [newItem, setNewItem] = useState('');
+        
+        const handleAdd = () => {
+          if (!newItem.trim()) return;
+          if (items.includes(newItem.trim())) {
+             alert(t.alreadyExists);
+             return;
+          }
+          onAdd(newItem.trim());
+          setNewItem('');
+        };
+
+        return (
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={newItem} 
+                onChange={(e) => setNewItem(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+                placeholder={placeholder || t.addItemToLibrary} 
+                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-none" 
+              />
+              <button onClick={handleAdd} className="p-2.5 bg-slate-900 text-white rounded-xl active:scale-95 transition-transform">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg>
+              </button>
+            </div>
+            
+            <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden max-h-[300px] overflow-y-auto">
+              {items.length > 0 ? (
+                items.map((item, index) => (
+                  <div key={index} className="flex items-center px-4 py-2.5 border-b border-slate-100 last:border-0 gap-3 group">
+                    <input 
+                      type="text" 
+                      value={item} 
+                      onChange={(e) => onEdit(index, e.target.value)}
+                      className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-slate-700 focus:text-slate-900 p-0"
+                    />
+                    <button onClick={() => onDelete(index)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs font-bold text-slate-400 italic">
+                  {t.libraryEmpty}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      const SettingsModal = ({ 
+        isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, 
+        activeMode, exerciseRegistry, setExerciseRegistry, shopRegistry, setShopRegistry, 
+        clearRegistry, t 
+      }) => {
         if (!isOpen) return null;
 
         const currentUISettings = uiSettings[activeMode];
@@ -482,8 +567,17 @@
           }));
         };
 
-        const currentLibrary = activeMode === 'gym' ? knownExercisesWithCount : knownShopItemsWithCount;
+        const currentRegistry = activeMode === 'gym' ? exerciseRegistry : shopRegistry;
+        const setRegistry = activeMode === 'gym' ? setExerciseRegistry : setShopRegistry;
         const libraryTitle = activeMode === 'gym' ? t.exerciseLibrary : t.shopLibrary;
+
+        const handleAdd = (val) => setRegistry(prev => [...prev, val].sort((a,b) => a.localeCompare(b)));
+        const handleDelete = (index) => setRegistry(prev => prev.filter((_, i) => i !== index));
+        const handleEdit = (index, val) => setRegistry(prev => {
+          const next = [...prev];
+          next[index] = val;
+          return next;
+        });
 
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 modal-backdrop fade-in">
@@ -578,7 +672,7 @@
                   </div>
                 </div>
 
-                {/* Library Section */}
+                {/* Library Section with Manual Edits */}
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center">
                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -590,22 +684,15 @@
                       </button>
                     )}
                   </div>
-                  <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden max-h-[300px] overflow-y-auto">
-                    {currentLibrary.length > 0 ? (
-                      currentLibrary.map(({ name, count }) => (
-                        <div key={name} className="flex justify-between items-center px-4 py-3 border-b border-slate-100 last:border-0">
-                          <span className="text-sm font-bold text-slate-700">{name}</span>
-                          <span className="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-black text-slate-500 tabular-nums">
-                            {count} {t.count}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-8 text-center text-xs font-bold text-slate-400 italic">
-                        {t.libraryEmpty}
-                      </div>
-                    )}
-                  </div>
+                  
+                  <LibraryEditor 
+                    items={currentRegistry} 
+                    onAdd={handleAdd} 
+                    onDelete={handleDelete} 
+                    onEdit={handleEdit} 
+                    t={t} 
+                    placeholder={t.editItemPlaceholder}
+                  />
                 </div>
               </div>
 
@@ -729,7 +816,7 @@
                 </div>
               </div>
 
-              <div className="p-6- flex-1 flex flex-col min-h-[350px]">
+              <div className="flex-1 flex flex-col min-h-[350px]">
                 {activeTab === 'exercises' && (
                   <div className="p-6 pb-0">
                     <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 custom-select focus:ring-2 focus:ring-slate-900 focus:outline-none">
@@ -756,7 +843,7 @@
         );
       };
 
-      const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownExercises, knownShopItems, t }) => {
+      const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownItems, t }) => {
         const [isConfirming, setIsConfirming] = useState(false);
         const [showSuggestions, setShowSuggestions] = useState(false);
         const textRef = useRef(null);
@@ -770,13 +857,11 @@
           }
         }, []);
 
-        const currentKnownList = mode === 'gym' ? knownExercises : knownShopItems;
-
         const filteredSuggestions = useMemo(() => {
           if (!record.description || record.description.length < 1) return [];
           const query = record.description.toLowerCase().trim();
-          return currentKnownList.filter(item => item.toLowerCase().includes(query) && item.toLowerCase() !== query).slice(0, 5);
-        }, [record.description, currentKnownList]);
+          return knownItems.filter(item => item.toLowerCase().includes(query) && item.toLowerCase() !== query).slice(0, 5);
+        }, [record.description, knownItems]);
 
         const handleDeleteClick = (e) => {
           e.preventDefault();
@@ -807,7 +892,7 @@
           backgroundColor: 'white',
           borderWidth: '1px',
           borderColor: '#e2e8f0',
-          zIndex: (showSuggestions && filteredSuggestions.length > 0) ? 50 : 1,
+          zIndex: (showSuggestions && filteredSuggestions.length > 0) ? 500 : 1,
           position: 'relative'
         };
 
@@ -861,7 +946,16 @@
         const [language, setLanguage] = useState(localStorage.getItem('gt_lang') || 'ru');
         const [mode, setMode] = useState(localStorage.getItem('gt_mode') || 'gym');
         
-        // Реестр имен списков покупок (чтобы пустые списки не пропадали)
+        // Мануальные списки (реестры)
+        const [exerciseRegistry, setExerciseRegistry] = useState(() => {
+          const saved = localStorage.getItem('gt_exercise_registry');
+          return saved ? JSON.parse(saved) : [];
+        });
+        const [shopRegistry, setShopRegistry] = useState(() => {
+          const saved = localStorage.getItem('gt_shop_registry');
+          return saved ? JSON.parse(saved) : [];
+        });
+
         const [shopListRegistry, setShopListRegistry] = useState(() => {
           const saved = localStorage.getItem('gt_shop_list_registry');
           return saved ? JSON.parse(saved) : [];
@@ -893,31 +987,21 @@
         const [now, setNow] = useState(Date.now());
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
-        
-        const knownExercisesWithCount = useMemo(() => {
-          const counts = {};
-          records.filter(r => (r.mode === 'gym' || !r.mode) && r.description.trim() !== '')
-                 .forEach(r => {
-                   const name = r.description.trim();
-                   counts[name] = (counts[name] || 0) + 1;
-                 });
-          return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-        }, [records]);
 
-        const knownShopItemsWithCount = useMemo(() => {
-          const counts = {};
-          records.filter(r => r.mode === 'shop' && r.description.trim() !== '')
-                 .forEach(r => {
-                   const name = r.description.trim();
-                   counts[name] = (counts[name] || 0) + 1;
-                 });
-          return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-        }, [records]);
+        // Совмещаем мануальный реестр с тем, что есть в записях (для предложений)
+        const knownExercises = useMemo(() => {
+          const fromRecords = new Set(records.filter(r => (r.mode === 'gym' || !r.mode) && r.description.trim() !== '').map(r => r.description.trim()));
+          const combined = new Set([...exerciseRegistry, ...fromRecords]);
+          return Array.from(combined).sort((a,b) => a.localeCompare(b));
+        }, [records, exerciseRegistry]);
 
-        const knownExercises = useMemo(() => knownExercisesWithCount.map(i => i.name).sort(), [knownExercisesWithCount]);
-        const knownShopItems = useMemo(() => knownShopItemsWithCount.map(i => i.name).sort(), [knownShopItemsWithCount]);
+        const knownShopItems = useMemo(() => {
+          const fromRecords = new Set(records.filter(r => r.mode === 'shop' && r.description.trim() !== '').map(r => r.description.trim()));
+          const combined = new Set([...shopRegistry, ...fromRecords]);
+          return Array.from(combined).sort((a,b) => a.localeCompare(b));
+        }, [records, shopRegistry]);
 
-        // Объединенный список всех имен списков (из базы и из реестра имен)
+        // Реестр имен списков
         const allShopLists = useMemo(() => {
           const listSet = new Set(shopListRegistry);
           records.forEach(r => {
@@ -960,6 +1044,8 @@
         useEffect(() => { localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings)); }, [uiSettings]);
         useEffect(() => { localStorage.setItem('gt_shop_list_name', shopListName); }, [shopListName]);
         useEffect(() => { localStorage.setItem('gt_shop_list_registry', JSON.stringify(shopListRegistry)); }, [shopListRegistry]);
+        useEffect(() => { localStorage.setItem('gt_exercise_registry', JSON.stringify(exerciseRegistry)); }, [exerciseRegistry]);
+        useEffect(() => { localStorage.setItem('gt_shop_registry', JSON.stringify(shopRegistry)); }, [shopRegistry]);
 
         useEffect(() => {
           const init = async () => {
@@ -968,6 +1054,16 @@
               if (savedRecords) {
                 const updated = savedRecords.map(r => r.dateKey ? r : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) });
                 setRecords(updated);
+                
+                // Если реестры пусты, попробуем населить их из истории один раз
+                if (exerciseRegistry.length === 0) {
+                   const exFromRec = new Set(updated.filter(r => (r.mode === 'gym' || !r.mode) && r.description.trim()).map(r => r.description.trim()));
+                   if (exFromRec.size > 0) setExerciseRegistry(Array.from(exFromRec).sort());
+                }
+                if (shopRegistry.length === 0) {
+                   const shFromRec = new Set(updated.filter(r => r.mode === 'shop' && r.description.trim()).map(r => r.description.trim()));
+                   if (shFromRec.size > 0) setShopRegistry(Array.from(shFromRec).sort());
+                }
               }
               if (savedWeights) setWeights(savedWeights);
               if (savedSessions) setSessions(savedSessions);
@@ -1027,7 +1123,6 @@
 
         const handleManualSave = async () => { 
           try { 
-            // Сохраняем имя списка в реестр, чтобы оно не потерялось, даже если список пустой
             if (mode === 'shop' && shopListName.trim() && !shopListRegistry.includes(shopListName.trim())) {
               setShopListRegistry(prev => [...prev, shopListName.trim()]);
             }
@@ -1039,8 +1134,48 @@
         };
 
         const handleWeightChange = (val) => { const cleaned = val.replace(/[^0-9.]/g, ''); setWeights(prev => ({ ...prev, [viewDateKey]: cleaned })); saveWeightToDB(viewDateKey, cleaned).catch(console.error); };
-        const exportJSON = () => { const dataStr = JSON.stringify({ records, weights, uiSettings, mode, sessions, shopListRegistry, exportedAt: new Date().toISOString() }, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(url); showToast(t.exportToast); };
-        const importJSON = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); if (data.records) setRecords(data.records); if (data.weights) setWeights(data.weights); if (data.uiSettings) setUiSettings(data.uiSettings); if (data.mode) setMode(data.mode); if (data.sessions) setSessions(data.sessions); if (data.shopListRegistry) setShopListRegistry(data.shopListRegistry); if (data.records) await saveToDB(data.records); if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } if (data.sessions) { for (const [dk, s] of Object.entries(data.sessions)) { await saveSessionToDB(dk, s); } } showToast(t.importToast); event.target.value = ''; } catch (err) { showToast(t.errorToast); } }; reader.readAsText(file); };
+        
+        const exportJSON = () => { 
+          const dataStr = JSON.stringify({ 
+            records, weights, uiSettings, mode, sessions, shopListRegistry, 
+            exerciseRegistry, shopRegistry, exportedAt: new Date().toISOString() 
+          }, null, 2); 
+          const blob = new Blob([dataStr], { type: 'application/json' }); 
+          const url = URL.createObjectURL(blob); 
+          const link = document.createElement('a'); 
+          link.href = url; 
+          link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; 
+          link.click(); 
+          URL.revokeObjectURL(url); 
+          showToast(t.exportToast); 
+        };
+
+        const importJSON = (event) => { 
+          const file = event.target.files[0]; 
+          if (!file) return; 
+          const reader = new FileReader(); 
+          reader.onload = async (e) => { 
+            try { 
+              const data = JSON.parse(e.target.result); 
+              if (data.records) setRecords(data.records); 
+              if (data.weights) setWeights(data.weights); 
+              if (data.uiSettings) setUiSettings(data.uiSettings); 
+              if (data.mode) setMode(data.mode); 
+              if (data.sessions) setSessions(data.sessions); 
+              if (data.shopListRegistry) setShopListRegistry(data.shopListRegistry); 
+              if (data.exerciseRegistry) setExerciseRegistry(data.exerciseRegistry);
+              if (data.shopRegistry) setShopRegistry(data.shopRegistry);
+
+              if (data.records) await saveToDB(data.records); 
+              if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } 
+              if (data.sessions) { for (const [dk, s] of Object.entries(data.sessions)) { await saveSessionToDB(dk, s); } } 
+              showToast(t.importToast); 
+              event.target.value = ''; 
+            } catch (err) { showToast(t.errorToast); } 
+          }; 
+          reader.readAsText(file); 
+        };
+
         const triggerImport = () => { importFileRef.current.click(); };
         
         const addNewRecord = () => { 
@@ -1050,7 +1185,6 @@
               listNameToUse = t.defaultListName;
               setShopListName(t.defaultListName);
             }
-            // Гарантируем, что имя попало в реестр
             if (listNameToUse && !shopListRegistry.includes(listNameToUse)) {
               setShopListRegistry(prev => [...prev, listNameToUse]);
             }
@@ -1121,7 +1255,7 @@
            setNow(Date.now());
         };
         const handleFinishSession = () => {
-           if (!sessions[viewDateKey]?.start) return;
+           if (!sessions[viewDateKey]?.start || sessions[viewDateKey]?.end) return;
            const newSess = { ...sessions[viewDateKey], end: Date.now() };
            setSessions(prev => ({ ...prev, [viewDateKey]: newSess }));
            saveSessionToDB(viewDateKey, newSess);
@@ -1129,7 +1263,7 @@
         };
 
         const handleDragStart = (e, index) => { setDraggedIdx(index); setIsDraggingInProgress(true); };
-        const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIdx === null || draggedIdx === index) return; const itemMoving = currentRecords[draggedIdx]; const targetItem = currentRecords[index]; setRecords(prev => { const next = [...prev]; const idxM = next.findIndex(r => r.id === itemMoving.id); const idxT = next.findIndex(r => r.id === targetItem.id); if (idxM === -1 || idxT === -1) return prev; const updated = [...next]; const [removed] = updated.splice(idxM, 1); updated.splice(idxT, 0, removed); return updated; }); setDraggedIdx(index); };
+        const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIdx === null || draggedIdx === index) return; const itemMoving = currentRecords[draggedIdx]; const targetItem = currentRecords[index]; setRecords(prev => { const next = [...prev]; const idxM = next.findIndex(r => r.id === itemMoving.id); const idxT = next.findIndex(r => r.id === targetItem.id); if (idxM || idxT) return prev; const updated = [...next]; const [removed] = updated.splice(idxM, 1); updated.splice(idxT, 0, removed); return updated; }); setDraggedIdx(index); };
         const handleDragEnd = () => { setDraggedIdx(null); setIsDraggingInProgress(false); };
 
         if (!isLoaded) return null;
@@ -1149,8 +1283,10 @@
                 uiSettings={uiSettings} 
                 setUiSettings={setUiSettings} 
                 activeMode={mode} 
-                knownExercisesWithCount={knownExercisesWithCount} 
-                knownShopItemsWithCount={knownShopItemsWithCount}
+                exerciseRegistry={exerciseRegistry}
+                setExerciseRegistry={setExerciseRegistry}
+                shopRegistry={shopRegistry}
+                setShopRegistry={setShopRegistry}
                 clearRegistry={clearRegistryOfEmptyLists}
                 t={t} 
             />
@@ -1214,7 +1350,7 @@
                     
                     <div className="flex items-center flex-1 px-1 gap-1.5 min-w-0 transition-all">
                       <div className="shrink-0">
-                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                       </div>
                       <input 
                         type="text" 
@@ -1246,8 +1382,7 @@
                         isDragging={draggedIdx === idx} 
                         uiSettings={uiSettings[mode]} 
                         mode={mode} 
-                        knownExercises={knownExercises} 
-                        knownShopItems={knownShopItems}
+                        knownItems={mode === 'gym' ? knownExercises : knownShopItems}
                         t={t} 
                     />
                 ))}
