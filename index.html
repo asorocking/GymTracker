@@ -99,7 +99,7 @@
 
       .secondary-button {
         transition: all 0.2s ease;
-        @apply flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border border-slate-200 bg-white text-slate-600 shadow-sm active:scale-95;
+        @apply flex items-center justify-center px-8 py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-widest border-2 border-slate-200 bg-white text-slate-600 shadow-md active:scale-95 active:bg-slate-50 active:border-slate-300;
       }
 
       .toast {
@@ -236,6 +236,42 @@
         background-position: right 0.75rem center;
         background-size: 1rem;
       }
+
+      /* Toggle Switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #e2e8f0;
+        transition: .4s;
+        border-radius: 22px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px; width: 16px;
+        left: 3px; bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #0f172a;
+      }
+      input:checked + .slider:before {
+        transform: translateX(18px);
+      }
     </style>
   </head>
   <body class="antialiased text-slate-900">
@@ -278,7 +314,7 @@
           importToast: "Импортировано ✅",
           addExercise: "Добавить упражнение",
           addItem: "Добавить в список",
-          repeatLast: "Повторить прошлую",
+          repeatLast: "Повторить прошлую тренировку",
           noPastData: "Нет данных 🤷‍♂️",
           copySuccess: "Копия:",
           clearConfirm: "Подтвердите удаление?",
@@ -312,7 +348,10 @@
           deleteEmptyLists: "Очистить пустые списки",
           addItemToLibrary: "Добавить в библиотеку",
           editItemPlaceholder: "Название...",
-          alreadyExists: "Уже в списке!"
+          alreadyExists: "Уже в списке!",
+          toastDurationLabel: "Длительность уведомлений (сек)",
+          maxWorkoutTimeLabel: "Лимит времени тренировки (час)",
+          enableToastsLabel: "Показывать уведомления"
         },
         en: {
           appName: "GymTracker",
@@ -337,7 +376,7 @@
           importToast: "Imported ✅",
           addExercise: "Add Exercise",
           addItem: "Add to List",
-          repeatLast: "Repeat previous",
+          repeatLast: "Repeat last workout",
           noPastData: "No data 🤷‍♂️",
           copySuccess: "Copied:",
           clearConfirm: "Confirm clear?",
@@ -371,7 +410,10 @@
           deleteEmptyLists: "Clear empty lists",
           addItemToLibrary: "Add to library",
           editItemPlaceholder: "Name...",
-          alreadyExists: "Already exists!"
+          alreadyExists: "Already exists!",
+          toastDurationLabel: "Toast duration (sec)",
+          maxWorkoutTimeLabel: "Workout time limit (hrs)",
+          enableToastsLabel: "Show notifications"
         }
       };
 
@@ -620,6 +662,36 @@
                   </label>
                   
                   <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-600">{t.enableToastsLabel}</span>
+                      <label className="switch">
+                        <input 
+                          type="checkbox" 
+                          checked={currentUISettings.enableToasts !== false} 
+                          onChange={(e) => updateUI('enableToasts', e.target.checked)} 
+                        />
+                        <span className="slider"></span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>{t.toastDurationLabel}</span>
+                        <span>{currentUISettings.toastDuration || 3}с</span>
+                      </div>
+                      <input type="range" min="1" max="15" step="1" value={currentUISettings.toastDuration || 3} onChange={(e) => updateUI('toastDuration', parseInt(e.target.value))} />
+                    </div>
+
+                    {activeMode === 'gym' && (
+                      <div>
+                        <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                          <span>{t.maxWorkoutTimeLabel}</span>
+                          <span>{currentUISettings.maxWorkoutTime || 4}ч</span>
+                        </div>
+                        <input type="range" min="1" max="24" step="1" value={currentUISettings.maxWorkoutTime || 4} onChange={(e) => updateUI('maxWorkoutTime', parseInt(e.target.value))} />
+                      </div>
+                    )}
+
                     <div>
                       <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
                         <span>{t.fontSize}</span>
@@ -963,11 +1035,11 @@
         const [shopListName, setShopListName] = useState(localStorage.getItem('gt_shop_list_name') || "");
         
         const [uiSettings, setUiSettings] = useState(() => {
-          const saved = localStorage.getItem('gt_ui_settings_v2');
+          const saved = localStorage.getItem('gt_ui_settings_v3');
           if (saved) return JSON.parse(saved);
           return {
-            gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', fontSize: 12, lineCount: 2 },
-            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1 }
+            gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', fontSize: 12, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
+            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
           };
         });
         const [viewDate, setViewDate] = useState(new Date());
@@ -1028,7 +1100,9 @@
           if (!sess || !sess.start) return null;
           const endTime = sess.end || now;
           const diffMs = endTime - sess.start;
-          const maxMs = 4 * 60 * 60 * 1000; // 4 часа макс
+          
+          const maxHours = uiSettings.gym?.maxWorkoutTime || 4;
+          const maxMs = maxHours * 60 * 60 * 1000; 
           const effectiveMs = Math.max(0, Math.min(diffMs, maxMs));
           
           const hours = Math.floor(effectiveMs / 3600000);
@@ -1036,11 +1110,11 @@
           const secs = Math.floor((effectiveMs % 60000) / 1000);
           
           return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-        }, [sessions, viewDateKey, now]);
+        }, [sessions, viewDateKey, now, uiSettings.gym?.maxWorkoutTime]);
 
         useEffect(() => { localStorage.setItem('gt_lang', language); }, [language]);
         useEffect(() => { localStorage.setItem('gt_mode', mode); }, [mode]);
-        useEffect(() => { localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings)); }, [uiSettings]);
+        useEffect(() => { localStorage.setItem('gt_ui_settings_v3', JSON.stringify(uiSettings)); }, [uiSettings]);
         useEffect(() => { localStorage.setItem('gt_shop_list_name', shopListName); }, [shopListName]);
         useEffect(() => { localStorage.setItem('gt_shop_list_registry', JSON.stringify(shopListRegistry)); }, [shopListRegistry]);
         useEffect(() => { localStorage.setItem('gt_exercise_registry', JSON.stringify(exerciseRegistry)); }, [exerciseRegistry]);
@@ -1086,7 +1160,15 @@
           if (isLoaded && !isDraggingInProgress) { saveToDB(records).catch(console.error); }
         }, [records, isLoaded, isDraggingInProgress]);
 
-        const showToast = (message) => { setToast({ show: true, message }); setTimeout(() => setToast({ show: false, message: '' }), 3000); };
+        const showToast = (message, force = false) => { 
+          const currentSettings = uiSettings[mode];
+          // If toasts are disabled and it's not a "forced" message (like errors/saves), don't show
+          if (!force && currentSettings.enableToasts === false) return;
+          
+          setToast({ show: true, message }); 
+          const duration = (currentSettings.toastDuration || 3) * 1000;
+          setTimeout(() => setToast({ show: false, message: '' }), duration); 
+        };
         
         const changeDate = (offset) => { setViewDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + offset); return n; }); };
         
@@ -1126,9 +1208,9 @@
               setShopListRegistry(prev => [...prev, shopListName.trim()]);
             }
             await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]); 
-            showToast(t.savedToast); 
+            showToast(t.savedToast, true); 
           } catch (err) { 
-            showToast(t.errorToast); 
+            showToast(t.errorToast, true); 
           } 
         };
 
@@ -1146,7 +1228,7 @@
           link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; 
           link.click(); 
           URL.revokeObjectURL(url); 
-          showToast(t.exportToast); 
+          showToast(t.exportToast, true); 
         };
 
         const importJSON = (event) => { 
@@ -1168,9 +1250,9 @@
               if (data.records) await saveToDB(data.records); 
               if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } 
               if (data.sessions) { for (const [dk, s] of Object.entries(data.sessions)) { await saveSessionToDB(dk, s); } } 
-              showToast(t.importToast); 
+              showToast(t.importToast, true); 
               event.target.value = ''; 
-            } catch (err) { showToast(t.errorToast); } 
+            } catch (err) { showToast(t.errorToast, true); } 
           }; 
           reader.readAsText(file); 
         };
@@ -1215,7 +1297,7 @@
               setRecords(prev => prev.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName))));
             }
             setIsClearConfirming(false); 
-            showToast(t.clearedToast); 
+            showToast(t.clearedToast, true); 
           } else { 
             setIsClearConfirming(true); 
             if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); 
@@ -1226,7 +1308,7 @@
         const clearRegistryOfEmptyLists = () => {
           const usedListNames = new Set(records.filter(r => r.mode === 'shop').map(r => r.listName));
           setShopListRegistry(Array.from(usedListNames).filter(Boolean));
-          showToast(t.clearedToast);
+          showToast(t.clearedToast, true);
         };
 
         const copyFromLastWorkout = () => { 
@@ -1234,13 +1316,13 @@
             const filteredRecords = records.filter(r => r.mode === 'gym' || !r.mode); 
             const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort(); 
             const lastDate = pastDates.pop(); 
-            if (!lastDate) { showToast(t.noPastData); return; } 
+            if (!lastDate) { showToast(t.noPastData, true); return; } 
             const toCopy = filteredRecords.filter(r => r.dateKey === lastDate); 
             const cloned = toCopy.map((r, i) => ({ ...r, id: String(Date.now() + Math.random() + i), dateKey: viewDateKey, val1: '', val2: '', val3: '', isNew: false, isHighlighted: r.isHighlighted, isCompleted: false, createdAt: Date.now(), mode: 'gym', sortOrder: records.length + i })); 
             setRecords(prev => [...prev, ...cloned]); 
-            showToast(`${t.copySuccess} ${lastDate} 📋`); 
+            showToast(`${t.copySuccess} ${lastDate} 📋`, true); 
           } else {
-            showToast(t.noPastData);
+            showToast(t.noPastData, true);
           }
         };
 
@@ -1273,6 +1355,7 @@
            const newSess = { start: null, end: null };
            setSessions(prev => ({ ...prev, [viewDateKey]: newSess }));
            saveSessionToDB(viewDateKey, newSess).catch(console.error);
+           // Show "Time reset" toast - informational
            showToast(t.resetToast);
            if (window.navigator.vibrate) window.navigator.vibrate(50);
         };
@@ -1430,7 +1513,7 @@
                     
                     <div className="flex items-center flex-1 px-1 gap-1.5 min-w-0 transition-all">
                       <div className="shrink-0">
-                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /></svg>
                       </div>
                       <input 
                         type="text" 
@@ -1467,15 +1550,19 @@
                     />
                 ))}
               </div>
-              {currentRecords.length === 0 && (
-                <div className="w-full py-12 flex flex-col items-center justify-center gap-6">
-                  {mode === 'gym' && (
-                    <button onClick={copyFromLastWorkout} className="secondary-button"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>{t.repeatLast}</button>
-                  )}
-                </div>
-              )}
               <div className="flex flex-col gap-3 mt-1.5 ml-1 w-full pr-1">
-                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span></button>
+                {currentRecords.length === 0 && mode === 'gym' && (
+                  <button onClick={copyFromLastWorkout} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg mb-0.5">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                    <span className="text-sm font-bold">{t.repeatLast}</span>
+                  </button>
+                )}
+                
+                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg>
+                  <span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span>
+                </button>
+                
                 {currentRecords.length > 0 && (
                   <button onClick={deleteAllForCurrentContext} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>
                 )}
