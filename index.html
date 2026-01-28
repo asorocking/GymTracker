@@ -261,7 +261,7 @@
           noPastData: "Нет данных 🤷‍♂️",
           copySuccess: "Копия:",
           clearConfirm: "Подтвердите удаление?",
-          clearBtn: "Удалить все записи за день",
+          clearBtn: "Удалить записи",
           clearedToast: "Очищено 🗑️",
           settings: "Настройки",
           language: "Язык",
@@ -281,7 +281,13 @@
           exerciseLibrary: "Библиотека упражнений",
           shopLibrary: "Библиотека товаров",
           libraryEmpty: "Список пуст. Добавьте запись на главной.",
-          count: "раз"
+          count: "раз",
+          start: "Начать",
+          finish: "Закончить",
+          workoutTime: "Время тренировки",
+          listNameLabel: "Название",
+          defaultListName: "Новый список",
+          deleteEmptyLists: "Очистить пустые списки"
         },
         en: {
           appName: "GymTracker",
@@ -310,7 +316,7 @@
           noPastData: "No data 🤷‍♂️",
           copySuccess: "Copied:",
           clearConfirm: "Confirm clear?",
-          clearBtn: "Clear day records",
+          clearBtn: "Clear records",
           clearedToast: "Cleared 🗑️",
           settings: "Settings",
           language: "Language",
@@ -330,14 +336,21 @@
           exerciseLibrary: "Exercise Library",
           shopLibrary: "Shop Library",
           libraryEmpty: "Library is empty. Add items on the main screen.",
-          count: "times"
+          count: "times",
+          start: "Start",
+          finish: "Finish",
+          workoutTime: "Workout Time",
+          listNameLabel: "List Name",
+          defaultListName: "New List",
+          deleteEmptyLists: "Clear empty lists"
         }
       };
 
       const DB_NAME = 'TrackerDB';
       const STORE_RECORDS = 'records';
       const STORE_WEIGHTS = 'weights';
-      const DB_VERSION = 3;
+      const STORE_SESSIONS = 'sessions';
+      const DB_VERSION = 4;
 
       const initDB = () => {
         return new Promise((resolve, reject) => {
@@ -349,6 +362,9 @@
             }
             if (!db.objectStoreNames.contains(STORE_WEIGHTS)) {
               db.createObjectStore(STORE_WEIGHTS, { keyPath: 'dateKey' });
+            }
+            if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
+              db.createObjectStore(STORE_SESSIONS, { keyPath: 'dateKey' });
             }
           };
           request.onsuccess = (e) => resolve(e.target.result);
@@ -418,12 +434,40 @@
         });
       };
 
+      const saveSessionToDB = async (dateKey, session) => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_SESSIONS, 'readwrite');
+        const store = tx.objectStore(STORE_SESSIONS);
+        return new Promise((resolve, reject) => {
+          store.put({ dateKey, ...session });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      };
+
+      const loadSessionsFromDB = async () => {
+        const db = await initDB();
+        const tx = db.transaction(STORE_SESSIONS, 'readonly');
+        const store = tx.objectStore(STORE_SESSIONS);
+        return new Promise((resolve) => {
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const sessionsMap = {};
+            request.result.forEach(item => { 
+                const { dateKey, ...rest } = item;
+                sessionsMap[dateKey] = rest; 
+            });
+            resolve(sessionsMap);
+          };
+        });
+      };
+
       const getDateKey = (date) => {
         const d = new Date(date);
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       };
 
-      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, knownShopItemsWithCount, t }) => {
+      const SettingsModal = ({ isOpen, onClose, language, setLanguage, uiSettings, setUiSettings, activeMode, knownExercisesWithCount, knownShopItemsWithCount, clearRegistry, t }) => {
         if (!isOpen) return null;
 
         const currentUISettings = uiSettings[activeMode];
@@ -536,9 +580,16 @@
 
                 {/* Library Section */}
                 <div className="flex flex-col gap-3">
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    {libraryTitle}
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {libraryTitle}
+                    </label>
+                    {activeMode === 'shop' && (
+                      <button onClick={clearRegistry} className="text-[9px] font-bold text-red-400 hover:text-red-600 transition-colors uppercase tracking-tight">
+                        {t.deleteEmptyLists}
+                      </button>
+                    )}
+                  </div>
                   <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden max-h-[300px] overflow-y-auto">
                     {currentLibrary.length > 0 ? (
                       currentLibrary.map(({ name, count }) => (
@@ -678,16 +729,16 @@
                 </div>
               </div>
 
-              <div className="p-6 flex-1 flex flex-col min-h-[350px]">
+              <div className="p-6- flex-1 flex flex-col min-h-[350px]">
                 {activeTab === 'exercises' && (
-                  <div className="mb-4">
+                  <div className="p-6 pb-0">
                     <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 custom-select focus:ring-2 focus:ring-slate-900 focus:outline-none">
                       <option value="" disabled>{t.selectExercise}</option>
                       {knownExercises.map(ex => (<option key={ex} value={ex}>{ex}</option>))}
                     </select>
                   </div>
                 )}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative p-6">
                   {(activeTab === 'body' ? Object.keys(weights).filter(k => weights[k] !== '' && weights[k] !== null).length > 0 : (selectedExercise && records.some(r => r.description.trim() === selectedExercise && (r.val1 || r.val2 || r.val3)))) ? (
                     <canvas ref={canvasRef}></canvas>
                   ) : (
@@ -806,8 +857,20 @@
       const App = () => {
         const [records, setRecords] = useState([]);
         const [weights, setWeights] = useState({});
+        const [sessions, setSessions] = useState({});
         const [language, setLanguage] = useState(localStorage.getItem('gt_lang') || 'ru');
         const [mode, setMode] = useState(localStorage.getItem('gt_mode') || 'gym');
+        
+        // Реестр имен списков покупок (чтобы пустые списки не пропадали)
+        const [shopListRegistry, setShopListRegistry] = useState(() => {
+          const saved = localStorage.getItem('gt_shop_list_registry');
+          return saved ? JSON.parse(saved) : [];
+        });
+
+        const t = useMemo(() => i18n[language], [language]);
+
+        const [shopListName, setShopListName] = useState(localStorage.getItem('gt_shop_list_name') || "");
+        
         const [uiSettings, setUiSettings] = useState(() => {
           const saved = localStorage.getItem('gt_ui_settings_v2');
           if (saved) return JSON.parse(saved);
@@ -826,8 +889,9 @@
         const [isClearConfirming, setIsClearConfirming] = useState(false);
         const clearConfirmTimeout = useRef(null);
         const importFileRef = useRef(null);
+        
+        const [now, setNow] = useState(Date.now());
 
-        const t = useMemo(() => i18n[language], [language]);
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
         
         const knownExercisesWithCount = useMemo(() => {
@@ -853,26 +917,60 @@
         const knownExercises = useMemo(() => knownExercisesWithCount.map(i => i.name).sort(), [knownExercisesWithCount]);
         const knownShopItems = useMemo(() => knownShopItemsWithCount.map(i => i.name).sort(), [knownShopItemsWithCount]);
 
+        // Объединенный список всех имен списков (из базы и из реестра имен)
+        const allShopLists = useMemo(() => {
+          const listSet = new Set(shopListRegistry);
+          records.forEach(r => {
+            if (r.mode === 'shop' && r.listName) {
+              listSet.add(r.listName);
+            }
+          });
+          return Array.from(listSet).filter(Boolean).sort((a, b) => a.localeCompare(b));
+        }, [records, shopListRegistry]);
+
         const currentRecords = useMemo(() => {
-          return records.filter(r => r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym')));
-        }, [records, viewDateKey, mode]);
+          if (mode === 'gym') {
+            return records.filter(r => r.dateKey === viewDateKey && (r.mode === 'gym' || !r.mode));
+          } else {
+            const targetName = shopListName || "";
+            return records.filter(r => r.mode === 'shop' && (r.listName === targetName));
+          }
+        }, [records, viewDateKey, mode, shopListName]);
 
         const currentWeight = weights[viewDateKey] || '';
         const displayDate = viewDate.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
+        const currentSessionDuration = useMemo(() => {
+          const sess = sessions[viewDateKey];
+          if (!sess || !sess.start) return null;
+          const endTime = sess.end || now;
+          const diffMs = endTime - sess.start;
+          const maxMs = 2 * 60 * 60 * 1000;
+          const effectiveMs = Math.min(diffMs, maxMs);
+          
+          const hours = Math.floor(effectiveMs / 3600000);
+          const mins = Math.floor((effectiveMs % 3600000) / 60000);
+          const secs = Math.floor((effectiveMs % 60000) / 1000);
+          
+          return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }, [sessions, viewDateKey, now]);
+
         useEffect(() => { localStorage.setItem('gt_lang', language); }, [language]);
         useEffect(() => { localStorage.setItem('gt_mode', mode); }, [mode]);
         useEffect(() => { localStorage.setItem('gt_ui_settings_v2', JSON.stringify(uiSettings)); }, [uiSettings]);
+        useEffect(() => { localStorage.setItem('gt_shop_list_name', shopListName); }, [shopListName]);
+        useEffect(() => { localStorage.setItem('gt_shop_list_registry', JSON.stringify(shopListRegistry)); }, [shopListRegistry]);
 
         useEffect(() => {
           const init = async () => {
             try {
-              const [savedRecords, savedWeights] = await Promise.all([loadFromDB(), loadWeightsFromDB()]);
+              const [savedRecords, savedWeights, savedSessions] = await Promise.all([loadFromDB(), loadWeightsFromDB(), loadSessionsFromDB()]);
               if (savedRecords) {
                 const updated = savedRecords.map(r => r.dateKey ? r : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) });
                 setRecords(updated);
               }
               if (savedWeights) setWeights(savedWeights);
+              if (savedSessions) setSessions(savedSessions);
               setIsLoaded(true);
             } catch (err) { setIsLoaded(true); }
           };
@@ -880,27 +978,164 @@
         }, []);
 
         useEffect(() => {
+          if (mode === 'gym') {
+            const activeSess = sessions[viewDateKey];
+            if (activeSess && activeSess.start && !activeSess.end) {
+               const interval = setInterval(() => setNow(Date.now()), 1000);
+               return () => clearInterval(interval);
+            }
+          }
+        }, [sessions, viewDateKey, mode]);
+
+        useEffect(() => {
           if (isLoaded && !isDraggingInProgress) { saveToDB(records).catch(console.error); }
         }, [records, isLoaded, isDraggingInProgress]);
 
         const showToast = (message) => { setToast({ show: true, message }); setTimeout(() => setToast({ show: false, message: '' }), 3000); };
+        
         const changeDate = (offset) => { setViewDate(prev => { const n = new Date(prev); n.setDate(n.getDate() + offset); return n; }); };
-        const toggleMode = () => { const newMode = mode === 'gym' ? 'shop' : 'gym'; setMode(newMode); showToast(`${t.modeSwitched}${newMode === 'gym' ? t.appName : t.shopName}`); };
-        const handleManualSave = async () => { try { await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]); showToast(t.savedToast); } catch (err) { showToast(t.errorToast); } };
+        
+        const changeShopList = (offset) => {
+          const lists = allShopLists;
+          const currentIndex = lists.indexOf(shopListName);
+
+          if (offset === 1) { // Next
+            if (currentIndex === -1) { 
+              if (lists.length > 0) setShopListName(lists[0]);
+              else setShopListName("");
+            } else if (currentIndex === lists.length - 1) {
+              setShopListName(""); 
+            } else {
+              setShopListName(lists[currentIndex + 1]);
+            }
+          } else { // Prev
+            if (currentIndex === -1) { 
+              if (lists.length > 0) setShopListName(lists[lists.length - 1]);
+              else setShopListName("");
+            } else if (currentIndex === 0) {
+              setShopListName(""); 
+            } else {
+              setShopListName(lists[currentIndex - 1]);
+            }
+          }
+        };
+
+        const toggleMode = () => { 
+          const newMode = mode === 'gym' ? 'shop' : 'gym'; 
+          setMode(newMode); 
+        };
+
+        const handleManualSave = async () => { 
+          try { 
+            // Сохраняем имя списка в реестр, чтобы оно не потерялось, даже если список пустой
+            if (mode === 'shop' && shopListName.trim() && !shopListRegistry.includes(shopListName.trim())) {
+              setShopListRegistry(prev => [...prev, shopListName.trim()]);
+            }
+            await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]); 
+            showToast(t.savedToast); 
+          } catch (err) { 
+            showToast(t.errorToast); 
+          } 
+        };
+
         const handleWeightChange = (val) => { const cleaned = val.replace(/[^0-9.]/g, ''); setWeights(prev => ({ ...prev, [viewDateKey]: cleaned })); saveWeightToDB(viewDateKey, cleaned).catch(console.error); };
-        const exportJSON = () => { const dataStr = JSON.stringify({ records, weights, uiSettings, mode, exportedAt: new Date().toISOString() }, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(url); showToast(t.exportToast); };
-        const importJSON = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); if (data.records) setRecords(data.records); if (data.weights) setWeights(data.weights); if (data.uiSettings) setUiSettings(data.uiSettings); if (data.mode) setMode(data.mode); if (data.records) await saveToDB(data.records); if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } showToast(t.importToast); event.target.value = ''; } catch (err) { showToast(t.errorToast); } }; reader.readAsText(file); };
+        const exportJSON = () => { const dataStr = JSON.stringify({ records, weights, uiSettings, mode, sessions, shopListRegistry, exportedAt: new Date().toISOString() }, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(url); showToast(t.exportToast); };
+        const importJSON = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (e) => { try { const data = JSON.parse(e.target.result); if (data.records) setRecords(data.records); if (data.weights) setWeights(data.weights); if (data.uiSettings) setUiSettings(data.uiSettings); if (data.mode) setMode(data.mode); if (data.sessions) setSessions(data.sessions); if (data.shopListRegistry) setShopListRegistry(data.shopListRegistry); if (data.records) await saveToDB(data.records); if (data.weights) { for (const [dk, w] of Object.entries(data.weights)) { await saveWeightToDB(dk, w); } } if (data.sessions) { for (const [dk, s] of Object.entries(data.sessions)) { await saveSessionToDB(dk, s); } } showToast(t.importToast); event.target.value = ''; } catch (err) { showToast(t.errorToast); } }; reader.readAsText(file); };
         const triggerImport = () => { importFileRef.current.click(); };
-        const addNewRecord = () => { const newRecord = { id: String(Date.now() + Math.random()), description: '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: viewDateKey, mode: mode, sortOrder: records.length }; setRecords(prev => [...prev, newRecord]); };
-        const deleteAllForCurrentDay = () => { if (isClearConfirming) { setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && (r.mode === mode || (!r.mode && mode === 'gym'))))); setIsClearConfirming(false); showToast(t.clearedToast); } else { setIsClearConfirming(true); if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000); } };
-        const copyFromLastWorkout = () => { const filteredRecords = records.filter(r => r.mode === mode || (!r.mode && mode === 'gym')); const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort(); const lastDate = pastDates.pop(); if (!lastDate) { showToast(t.noPastData); return; } const toCopy = filteredRecords.filter(r => r.dateKey === lastDate); const cloned = toCopy.map((r, i) => ({ ...r, id: String(Date.now() + Math.random() + i), dateKey: viewDateKey, val1: '', val2: '', val3: '', isNew: false, isHighlighted: r.isHighlighted, isCompleted: false, createdAt: Date.now(), mode: mode, sortOrder: records.length + i })); setRecords(prev => [...prev, ...cloned]); showToast(`${t.copySuccess} ${lastDate} 📋`); };
+        
+        const addNewRecord = () => { 
+          let listNameToUse = shopListName;
+          if (mode === 'shop') {
+            if (!listNameToUse) {
+              listNameToUse = t.defaultListName;
+              setShopListName(t.defaultListName);
+            }
+            // Гарантируем, что имя попало в реестр
+            if (listNameToUse && !shopListRegistry.includes(listNameToUse)) {
+              setShopListRegistry(prev => [...prev, listNameToUse]);
+            }
+          }
+
+          const newRecord = { 
+            id: String(Date.now() + Math.random()), 
+            description: '', 
+            val1: '', 
+            val2: '', 
+            val3: '', 
+            isNew: true, 
+            isHighlighted: false, 
+            isCompleted: false, 
+            createdAt: Date.now(), 
+            dateKey: viewDateKey, 
+            mode: mode, 
+            listName: mode === 'shop' ? listNameToUse : null, 
+            sortOrder: records.length 
+          }; 
+          setRecords(prev => [...prev, newRecord]); 
+        };
+
+        const deleteAllForCurrentContext = () => { 
+          if (isClearConfirming) { 
+            if (mode === 'gym') {
+              setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && (r.mode === 'gym' || !r.mode))));
+            } else {
+              setRecords(prev => prev.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName))));
+            }
+            setIsClearConfirming(false); 
+            showToast(t.clearedToast); 
+          } else { 
+            setIsClearConfirming(true); 
+            if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); 
+            clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000); 
+          } 
+        };
+
+        const clearRegistryOfEmptyLists = () => {
+          const usedListNames = new Set(records.filter(r => r.mode === 'shop').map(r => r.listName));
+          setShopListRegistry(Array.from(usedListNames).filter(Boolean));
+          showToast(t.clearedToast);
+        };
+
+        const copyFromLastWorkout = () => { 
+          if (mode === 'gym') {
+            const filteredRecords = records.filter(r => r.mode === 'gym' || !r.mode); 
+            const pastDates = [...new Set(filteredRecords.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort(); 
+            const lastDate = pastDates.pop(); 
+            if (!lastDate) { showToast(t.noPastData); return; } 
+            const toCopy = filteredRecords.filter(r => r.dateKey === lastDate); 
+            const cloned = toCopy.map((r, i) => ({ ...r, id: String(Date.now() + Math.random() + i), dateKey: viewDateKey, val1: '', val2: '', val3: '', isNew: false, isHighlighted: r.isHighlighted, isCompleted: false, createdAt: Date.now(), mode: 'gym', sortOrder: records.length + i })); 
+            setRecords(prev => [...prev, ...cloned]); 
+            showToast(`${t.copySuccess} ${lastDate} 📋`); 
+          } else {
+            showToast(t.noPastData);
+          }
+        };
+
         const updateRecord = (id, field, value) => { setRecords(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r)); };
         const deleteRecord = (id) => { setRecords(prev => prev.filter(r => r.id !== id)); };
+        
+        const handleStartSession = () => {
+           const newSess = { ...sessions[viewDateKey], start: Date.now(), end: null };
+           setSessions(prev => ({ ...prev, [viewDateKey]: newSess }));
+           saveSessionToDB(viewDateKey, newSess);
+           setNow(Date.now());
+        };
+        const handleFinishSession = () => {
+           if (!sessions[viewDateKey]?.start) return;
+           const newSess = { ...sessions[viewDateKey], end: Date.now() };
+           setSessions(prev => ({ ...prev, [viewDateKey]: newSess }));
+           saveSessionToDB(viewDateKey, newSess);
+           setNow(Date.now());
+        };
+
         const handleDragStart = (e, index) => { setDraggedIdx(index); setIsDraggingInProgress(true); };
         const handleDragOver = (e, index) => { e.preventDefault(); if (draggedIdx === null || draggedIdx === index) return; const itemMoving = currentRecords[draggedIdx]; const targetItem = currentRecords[index]; setRecords(prev => { const next = [...prev]; const idxM = next.findIndex(r => r.id === itemMoving.id); const idxT = next.findIndex(r => r.id === targetItem.id); if (idxM === -1 || idxT === -1) return prev; const updated = [...next]; const [removed] = updated.splice(idxM, 1); updated.splice(idxT, 0, removed); return updated; }); setDraggedIdx(index); };
         const handleDragEnd = () => { setDraggedIdx(null); setIsDraggingInProgress(false); };
 
         if (!isLoaded) return null;
+
+        const sessionStartActive = !!sessions[viewDateKey]?.start;
+        const sessionFinishActive = !!sessions[viewDateKey]?.end;
 
         return (
           <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
@@ -916,6 +1151,7 @@
                 activeMode={mode} 
                 knownExercisesWithCount={knownExercisesWithCount} 
                 knownShopItemsWithCount={knownShopItemsWithCount}
+                clearRegistry={clearRegistryOfEmptyLists}
                 t={t} 
             />
 
@@ -938,10 +1174,60 @@
                   <button onClick={handleManualSave} className="p-1 text-slate-900 hover:text-slate-900 active:scale-125 transition-transform" title={t.save}><svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
                 </div>
               </div>
-              <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm">
-                <button onClick={() => changeDate(-1)} className="nav-btn"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg></button>
-                <div onClick={() => setViewDate(new Date())} className="flex items-center cursor-pointer py-1"><span className="text-xs font-black text-slate-900 tabular-nums">{displayDate}</span></div>
-                <button onClick={() => changeDate(1)} className="nav-btn"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg></button>
+              
+              <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm gap-1 min-h-[44px]">
+                {mode === 'gym' ? (
+                  <React.Fragment>
+                    <button onClick={() => changeDate(-1)} className="nav-btn shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg></button>
+                    
+                    <button 
+                      onClick={handleStartSession} 
+                      className={`px-3 py-1 text-[9px] font-black uppercase tracking-tighter rounded-md transition-all duration-300 ${sessionStartActive ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 active:bg-slate-900 active:text-white'}`}
+                    >
+                      {t.start}
+                    </button>
+
+                    <div onClick={() => setViewDate(new Date())} className="flex flex-col items-center justify-center cursor-pointer px-1 flex-1 min-w-[100px]">
+                      <span className="text-[10px] font-black text-slate-900 tabular-nums leading-none whitespace-nowrap mb-0.5">{displayDate}</span>
+                      {currentSessionDuration && (
+                        <div className="flex flex-col items-center gap-0">
+                          <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">{t.workoutTime}</span>
+                          <span className="text-[11px] font-black text-slate-600 tabular-nums leading-none">
+                            {currentSessionDuration}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button 
+                      onClick={handleFinishSession} 
+                      className={`px-3 py-1 text-[9px] font-black uppercase tracking-tighter rounded-md transition-all duration-300 ${sessionFinishActive ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 active:bg-slate-900 active:text-white'}`}
+                    >
+                      {t.finish}
+                    </button>
+
+                    <button onClick={() => changeDate(1)} className="nav-btn shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg></button>
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment>
+                    <button onClick={() => changeShopList(-1)} className="nav-btn shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg></button>
+                    
+                    <div className="flex items-center flex-1 px-1 gap-1.5 min-w-0 transition-all">
+                      <div className="shrink-0">
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                      </div>
+                      <input 
+                        type="text" 
+                        value={shopListName} 
+                        onChange={(e) => setShopListName(e.target.value)} 
+                        placeholder={t.defaultListName}
+                        className={`flex-1 bg-transparent border-none outline-none text-sm font-black focus:ring-0 p-0 m-0 overflow-hidden text-ellipsis whitespace-nowrap transition-colors ${shopListRegistry.includes(shopListName.trim()) ? 'text-slate-900' : 'text-slate-400'}`}
+                      />
+                    </div>
+
+                    <button onClick={() => changeShopList(1)} className="nav-btn shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg></button>
+                  </React.Fragment>
+                )}
               </div>
             </header>
 
@@ -968,13 +1254,15 @@
               </div>
               {currentRecords.length === 0 && (
                 <div className="w-full py-12 flex flex-col items-center justify-center gap-6">
-                  <button onClick={copyFromLastWorkout} className="secondary-button"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>{t.repeatLast}</button>
+                  {mode === 'gym' && (
+                    <button onClick={copyFromLastWorkout} className="secondary-button"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>{t.repeatLast}</button>
+                  )}
                 </div>
               )}
               <div className="flex flex-col gap-3 mt-1.5 ml-1 w-full pr-1">
                 <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : t.addItem}</span></button>
                 {currentRecords.length > 0 && (
-                  <button onClick={deleteAllForCurrentDay} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>
+                  <button onClick={deleteAllForCurrentContext} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>
                 )}
               </div>
             </main>
