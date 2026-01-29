@@ -76,7 +76,7 @@
         cursor: grabbing;
       }
       
-      textarea, input[type="text"] {
+      textarea, input[type="text"], input[type="date"], input[type="time"] {
         appearance: none;
         -webkit-appearance: none;
       }
@@ -336,6 +336,7 @@
           shopName: "ShopTracker",
           pressureName: "120/80",
           cookName: "Cook",
+          alarmName: "Alarm",
           weight: "Вес",
           kg: "кг",
           stats: "Статистика",
@@ -353,6 +354,7 @@
           notesPlaceholder: "Пометки...",
           shopPlaceholder: "Купить...",
           cookPlaceholder: "Название рецепта...",
+          alarmPlaceholder: "Текст уведомления...",
           recipeContentPlaceholder: "Ингредиенты и способ приготовления...",
           savedToast: "Сохранено 💾",
           errorToast: "Ошибка ⚠️",
@@ -362,6 +364,7 @@
           addItem: "Добавить в список",
           addPressure: "Новое измерение",
           addRecipe: "Новый рецепт",
+          addAlarm: "Новое уведомление",
           repeatLast: "Повторить прошлую тренировку",
           noPastData: "Нет данных 🤷‍♂️",
           copySuccess: "Копия:",
@@ -377,6 +380,7 @@
           uiSettingsShop: "Вид: Магазин",
           uiSettingsPressure: "Вид: Давление",
           uiSettingsCook: "Вид: Рецепты",
+          uiSettingsAlarm: "Вид: Alarm",
           itemHeight: "Высота записи",
           itemWidth: "Ширина записи",
           itemSpacing: "Интервал между записями",
@@ -418,6 +422,7 @@
           lowerLabel: "Нижнее",
           pulseLabel: "Пульс",
           timeLabel: "Время",
+          dateLabel: "Дата",
           commentPlaceholder: "Комментарий...",
           calendarTitle: "Календарь тренировок",
           daysShort: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
@@ -428,6 +433,7 @@
           shopName: "ShopTracker",
           pressureName: "120/80",
           cookName: "Cook",
+          alarmName: "Alarm",
           weight: "Weight",
           kg: "kg",
           stats: "Stats",
@@ -445,6 +451,7 @@
           notesPlaceholder: "Notes...",
           shopPlaceholder: "Buy...",
           cookPlaceholder: "Recipe title...",
+          alarmPlaceholder: "Notification text...",
           recipeContentPlaceholder: "Ingredients and instructions...",
           savedToast: "Saved 💾",
           errorToast: "Error ⚠️",
@@ -454,6 +461,7 @@
           addItem: "Add to List",
           addPressure: "New Measurement",
           addRecipe: "New Recipe",
+          addAlarm: "New Alarm",
           repeatLast: "Repeat last workout",
           noPastData: "No data 🤷‍♂️",
           copySuccess: "Copied:",
@@ -469,6 +477,7 @@
           uiSettingsShop: "UI: Shop Mode",
           uiSettingsPressure: "UI: 120/80 Mode",
           uiSettingsCook: "UI: Cook Mode",
+          uiSettingsAlarm: "UI: Alarm Mode",
           itemHeight: "Item Height",
           itemWidth: "Item Width",
           itemSpacing: "Item Spacing",
@@ -510,6 +519,7 @@
           lowerLabel: "Lower",
           pulseLabel: "Pulse",
           timeLabel: "Time",
+          dateLabel: "Date",
           commentPlaceholder: "Comment...",
           calendarTitle: "Workout Calendar",
           daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
@@ -891,7 +901,7 @@
                     </div>
                   </div>
 
-                  <button onClick={() => handleDelete(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                  <button onClick={() => handleDelete(index)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -966,7 +976,7 @@
                 >
                   {t.tabGeneral}
                 </button>
-                {activeMode !== 'pressure' && (
+                {activeMode !== 'pressure' && activeMode !== 'alarm' && (
                   <button 
                     onClick={() => setActiveTab('library')}
                     className={`pb-3 px-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === 'library' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
@@ -999,7 +1009,7 @@
                     {/* UI Customization Section */}
                     <div className="flex flex-col gap-4">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        {activeMode === 'gym' ? t.uiSettingsGym : activeMode === 'shop' ? t.uiSettingsShop : activeMode === 'pressure' ? t.uiSettingsPressure : t.uiSettingsCook}
+                        {activeMode === 'gym' ? t.uiSettingsGym : activeMode === 'shop' ? t.uiSettingsShop : activeMode === 'pressure' ? t.uiSettingsPressure : activeMode === 'cook' ? t.uiSettingsCook : t.uiSettingsAlarm}
                       </label>
                       
                       <div className="space-y-4">
@@ -1021,7 +1031,7 @@
                           <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.fontSize}</span><span>{currentUISettings.fontSize}px</span></div>
                           <input type="range" min="8" max="24" step="1" value={currentUISettings.fontSize} onChange={(e) => updateUI('fontSize', parseInt(e.target.value))} />
                         </div>
-                        {(activeMode === 'shop' || activeMode === 'cook') && (
+                        {(activeMode === 'shop' || activeMode === 'cook' || activeMode === 'alarm') && (
                           <div>
                             <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.lineCount}</span><span>{currentUISettings.lineCount}</span></div>
                             <input type="range" min="1" max="6" step="1" value={currentUISettings.lineCount} onChange={(e) => updateUI('lineCount', parseInt(e.target.value))} />
@@ -1040,7 +1050,7 @@
                           <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          {(activeMode === 'gym' || activeMode === 'cook') && (
+                          {(activeMode === 'gym' || activeMode === 'cook' || activeMode === 'alarm') && (
                             <div className="flex items-center gap-3">
                               <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}><input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} /></div>
                               <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
@@ -1174,7 +1184,7 @@
 
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop fade-in">
-            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white w-full max-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight">{t.progress}</h2>
                 <button onClick={onClose} className="p-2 -mr-2 text-slate-400">
@@ -1277,7 +1287,7 @@
         };
 
         const itemStyles = {
-          height: isExpanded ? 'auto' : `${uiSettings.itemHeight + (mode === 'pressure' ? 12 : 0)}px`,
+          height: isExpanded ? 'auto' : `${uiSettings.itemHeight + (mode === 'pressure' || mode === 'alarm' ? 12 : 0)}px`,
           width: `${uiSettings.itemWidth}%`,
           marginBottom: `${uiSettings.itemSpacing}px`,
           backgroundColor: 'white',
@@ -1288,14 +1298,14 @@
           paddingBottom: isExpanded ? '12px' : '0px'
         };
 
-        if (record.isCompleted && record.isHighlighted && (mode === 'gym' || mode === 'cook')) {
+        if (record.isCompleted && record.isHighlighted && (mode === 'gym' || mode === 'cook' || mode === 'alarm')) {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = uiSettings.highlightColor;
            itemStyles.boxShadow = `0 0 0 2px ${uiSettings.highlightColor} inset`;
         } else if (record.isCompleted) {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = '#cbd5e1';
-        } else if (record.isHighlighted && (mode === 'gym' || mode === 'cook')) {
+        } else if (record.isHighlighted && (mode === 'gym' || mode === 'cook' || mode === 'alarm')) {
            itemStyles.backgroundColor = uiSettings.highlightColor;
            itemStyles.borderColor = '#cbd5e1';
         }
@@ -1318,7 +1328,7 @@
               </div>
               
               <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5" onClick={(e) => e.stopPropagation()}>
-                {mode === 'gym' && (
+                {(mode === 'gym' || mode === 'alarm') && (
                   <button onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)} className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}>
                     <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="4" /></svg>
                   </button>
@@ -1359,6 +1369,22 @@
                     </div>
                     <div className="shrink-0 p-1 text-slate-400">
                       <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+                ) : mode === 'alarm' ? (
+                  <div className="flex flex-col gap-0.5 w-full pr-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.dateLabel}</span>
+                        <input type="date" value={record.dateKey || ''} onChange={(e) => onUpdate(record.id, 'dateKey', e.target.value)} className="bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-[10px] font-black text-slate-800 focus:outline-none" />
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.timeLabel}</span>
+                        <input type="time" value={record.notes || ''} onChange={(e) => onUpdate(record.id, 'notes', e.target.value)} className="bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-[10px] font-black text-slate-800 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <textarea rows={uiSettings.lineCount || 1} value={record.description} onChange={(e) => onUpdate(record.id, 'description', e.target.value)} placeholder={t.alarmPlaceholder} style={{ fontSize: `${uiSettings.fontSize || 13}px` }} className={`font-bold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight resize-none ${record.isCompleted ? 'opacity-40 text-slate-400' : 'text-slate-700'}`} />
                     </div>
                   </div>
                 ) : (
@@ -1460,7 +1486,8 @@
             gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', fontSize: 13, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
             shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
             pressure: { itemHeight: 44, itemWidth: 100, itemSpacing: 10, highlightColor: '#f1f5f9', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true },
-            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
+            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
+            alarm: { itemHeight: 64, itemWidth: 100, itemSpacing: 12, highlightColor: '#eff6ff', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true }
           };
         });
         const [viewDate, setViewDate] = useState(new Date());
@@ -1483,12 +1510,45 @@
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
 
-        // Only manual entries
+        // Request notification permissions
+        useEffect(() => {
+          if ("Notification" in window) {
+            Notification.requestPermission();
+          }
+        }, []);
+
+        // Alarm checking logic using 24-hour format
+        useEffect(() => {
+          const checkAlarms = () => {
+            const currentTime = new Date();
+            const dateKey = getDateKey(currentTime);
+            // Explicitly use 24-hour format for comparisons
+            const timeKey = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            
+            records.forEach(r => {
+              if (r.mode === 'alarm' && r.dateKey === dateKey && r.notes === timeKey && !r.isCompleted) {
+                if (Notification.permission === "granted") {
+                   new Notification(t.alarmName, {
+                     body: r.description || "Alarm!",
+                     icon: "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
+                   });
+                   updateRecord(r.id, 'isCompleted', true);
+                } else {
+                  showToast(`${t.alarmName}: ${r.description}`, true);
+                  updateRecord(r.id, 'isCompleted', true);
+                }
+              }
+            });
+          };
+
+          const interval = setInterval(checkAlarms, 30000); // Check every 30 seconds
+          return () => clearInterval(interval);
+        }, [records, t]);
+
         const knownExercises = useMemo(() => {
           return Array.from(new Set(exerciseRegistry)).sort((a,b) => a.localeCompare(b));
         }, [exerciseRegistry]);
 
-        // Only manual entries AND only if enabled for current list
         const knownShopItems = useMemo(() => {
           const currentListConfig = shopListRegistry.find(l => l.name === shopListName);
           if (currentListConfig && currentListConfig.enabled) {
@@ -1515,6 +1575,8 @@
             return records.filter(r => r.dateKey === viewDateKey && r.mode === 'pressure');
           } else if (mode === 'cook') {
             return records.filter(r => r.mode === 'cook');
+          } else if (mode === 'alarm') {
+            return records.filter(r => r.mode === 'alarm');
           }
           return [];
         }, [records, viewDateKey, mode, shopListName]);
@@ -1611,7 +1673,7 @@
         };
 
         const toggleMode = () => { 
-          const modes = ['gym', 'shop', 'pressure', 'cook'];
+          const modes = ['gym', 'shop', 'pressure', 'cook', 'alarm'];
           const nextIdx = (modes.indexOf(mode) + 1) % modes.length;
           setMode(modes[nextIdx]); 
         };
@@ -1695,7 +1757,8 @@
               setShopListRegistry(prev => [...prev, { name: listNameToUse, enabled: false }]);
             }
           }
-          const newRecord = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: mode === 'cook' ? null : viewDateKey, mode: mode, listName: mode === 'shop' ? listNameToUse : null, sortOrder: records.length }; 
+          const defaultDate = getDateKey(new Date());
+          const newRecord = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: mode === 'alarm' ? '09:00' : '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: mode === 'cook' ? null : (mode === 'alarm' ? defaultDate : viewDateKey), mode: mode, listName: mode === 'shop' ? listNameToUse : null, sortOrder: records.length }; 
           setRecords(prev => [...prev, newRecord]); 
         };
 
@@ -1705,6 +1768,7 @@
             else if (mode === 'shop') { setRecords(prev => prev.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName)))); }
             else if (mode === 'pressure') { setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && r.mode === 'pressure'))); }
             else if (mode === 'cook') { setRecords(prev => prev.filter(r => r.mode !== 'cook')); }
+            else if (mode === 'alarm') { setRecords(prev => prev.filter(r => r.mode !== 'alarm')); }
             setIsClearConfirming(false); showToast(t.clearedToast, true); 
           } else { 
             setIsClearConfirming(true); 
@@ -1839,7 +1903,7 @@
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2">
                 <h1 onClick={toggleMode} className="text-[17px] font-black text-slate-900 tracking-tight mode-toggle hover:scale-105 active:scale-95 transition-transform">
-                    {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : t.cookName}
+                    {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : mode === 'cook' ? t.cookName : t.alarmName}
                 </h1>
                 {mode === 'gym' && (
                   <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-1.5 py-0.5">
@@ -1850,7 +1914,7 @@
                 )}
                 <div className="flex items-center gap-2">
                   {mode === 'gym' && (<button onClick={() => setIsStatsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.stats}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg></button>)}
-                  <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+                  <button onClick={() => setIsSettingsOpen(true)} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.settings}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924-1.756-3.35 0a1.724 1.724 0 00-2.573-1.066-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
                   <input type="file" ref={importFileRef} onChange={importJSON} accept=".json" className="hidden" />
                   <button onClick={triggerImport} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.import}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8" /></svg></button>
                   <button onClick={exportJSON} className="p-1 text-slate-500 hover:text-slate-900 active:scale-125 transition-transform" title={t.export}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M8 8l4 4m0 0l4-4m-4 4V4" /></svg></button>
@@ -1893,6 +1957,7 @@
                   </React.Fragment>
                 ) : (
                     <div className="flex-1 flex justify-center">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{mode === 'cook' ? t.cookName : t.alarmName}</span>
                     </div>
                 )}
               </div>
@@ -1904,7 +1969,7 @@
               </div>
               <div className="flex flex-col gap-3 mt-1.5 ml-1 w-full pr-1">
                 {currentRecords.length === 0 && mode === 'gym' && (<button onClick={copyFromLastWorkout} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg mb-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg><span className="text-sm font-bold">{t.repeatLast}</span></button>)}
-                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : t.addRecipe}</span></button>
+                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : mode === 'cook' ? t.addRecipe : t.addAlarm}</span></button>
                 {currentRecords.length > 0 && (<button onClick={deleteAllForCurrentContext} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>)}
               </div>
             </main>
