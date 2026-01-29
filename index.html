@@ -1127,18 +1127,18 @@
                       <span className="text-[8px] font-black uppercase text-slate-400 leading-none">{t.timeLabel}</span>
                       <span className="text-[11px] font-black text-slate-600 tabular-nums leading-none">{formattedTime}</span>
                     </div>
-                    <div className="flex-1 flex gap-1 items-center">
-                      <div className="flex flex-col flex-1 gap-0.5">
-                        <span className="text-[7px] font-black uppercase text-slate-400 text-center leading-none">{t.upperLabel}</span>
-                        <input type="text" inputMode="numeric" value={record.val1 || ''} onChange={(e) => onUpdate(record.id, 'val1', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-full text-center bg-slate-50/50 border border-slate-100 rounded p-0.5 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
+                    <div className="flex-1 flex gap-1.5 items-center justify-between">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.upperLabel}</span>
+                        <input type="text" inputMode="numeric" maxLength={3} value={record.val1 || ''} onChange={(e) => onUpdate(record.id, 'val1', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-9 h-7 text-center bg-slate-50/50 border border-slate-100 rounded p-0 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
                       </div>
-                      <div className="flex flex-col flex-1 gap-0.5">
-                        <span className="text-[7px] font-black uppercase text-slate-400 text-center leading-none">{t.lowerLabel}</span>
-                        <input type="text" inputMode="numeric" value={record.val2 || ''} onChange={(e) => onUpdate(record.id, 'val2', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-full text-center bg-slate-50/50 border border-slate-100 rounded p-0.5 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.lowerLabel}</span>
+                        <input type="text" inputMode="numeric" maxLength={3} value={record.val2 || ''} onChange={(e) => onUpdate(record.id, 'val2', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-9 h-7 text-center bg-slate-50/50 border border-slate-100 rounded p-0 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
                       </div>
-                      <div className="flex flex-col flex-1 gap-0.5">
-                        <span className="text-[7px] font-black uppercase text-slate-400 text-center leading-none">{t.pulseLabel}</span>
-                        <input type="text" inputMode="numeric" value={record.val3 || ''} onChange={(e) => onUpdate(record.id, 'val3', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-full text-center bg-slate-50/50 border border-slate-100 rounded p-0.5 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.pulseLabel}</span>
+                        <input type="text" inputMode="numeric" maxLength={3} value={record.val3 || ''} onChange={(e) => onUpdate(record.id, 'val3', e.target.value.replace(/\D/g, '').slice(0, 3))} className="w-9 h-7 text-center bg-slate-50/50 border border-slate-100 rounded p-0 text-sm font-black text-slate-900 focus:outline-none focus:border-slate-300" placeholder="0" />
                       </div>
                     </div>
                   </div>
