@@ -58,14 +58,14 @@
 
       .tracker-item {
         position: relative;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        /* overflow: hidden; — будет управляться через style в JS для поддержки подсказок */
+        transition: box-shadow 0.2s ease, opacity 0.2s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform, opacity;
       }
       
+      /* Removed scale transform to prevent jump during drag initialization */
       .tracker-item.dragging {
-        opacity: 0.4;
-        transform: scale(0.98);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        opacity: 0.1;
+        box-shadow: none;
       }
 
       .drag-handle {
@@ -162,10 +162,6 @@
         margin-bottom: 2px;
       }
       
-      .suggestion-item:last-child {
-        margin-bottom: 0;
-      }
-
       .suggestion-item:active {
         @apply bg-slate-100 text-slate-900;
       }
@@ -264,7 +260,6 @@
         transform: translateX(18px);
       }
 
-      /* Calendar specific styles */
       .calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -336,7 +331,6 @@
           shopName: "ShopTracker",
           pressureName: "120/80",
           cookName: "Cook",
-          alarmName: "Уведомления",
           weight: "Вес",
           kg: "кг",
           stats: "Статистика",
@@ -354,7 +348,6 @@
           notesPlaceholder: "Пометки...",
           shopPlaceholder: "Купить...",
           cookPlaceholder: "Название рецепта...",
-          alarmPlaceholder: "Текст уведомления...",
           recipeContentPlaceholder: "Ингредиенты и способ приготовления...",
           savedToast: "Сохранено 💾",
           errorToast: "Ошибка ⚠️",
@@ -364,7 +357,6 @@
           addItem: "Добавить в список",
           addPressure: "Новое измерение",
           addRecipe: "Новый рецепт",
-          addAlarm: "Новое уведомление",
           repeatLast: "Повторить прошлую тренировку",
           noPastData: "Нет данных 🤷‍♂️",
           copySuccess: "Копия:",
@@ -380,7 +372,6 @@
           uiSettingsShop: "Вид: Магазин",
           uiSettingsPressure: "Вид: Давление",
           uiSettingsCook: "Вид: Рецепты",
-          uiSettingsAlarm: "Вид: Уведомления",
           itemHeight: "Высота записи",
           itemWidth: "Ширина записи",
           itemSpacing: "Интервал между записями",
@@ -434,7 +425,6 @@
           shopName: "ShopTracker",
           pressureName: "120/80",
           cookName: "Cook",
-          alarmName: "Alarms",
           weight: "Weight",
           kg: "kg",
           stats: "Stats",
@@ -452,7 +442,6 @@
           notesPlaceholder: "Notes...",
           shopPlaceholder: "Buy...",
           cookPlaceholder: "Recipe title...",
-          alarmPlaceholder: "Notification text...",
           recipeContentPlaceholder: "Ingredients and instructions...",
           savedToast: "Saved 💾",
           errorToast: "Error ⚠️",
@@ -462,7 +451,6 @@
           addItem: "Add to List",
           addPressure: "New Measurement",
           addRecipe: "New Recipe",
-          addAlarm: "New Alarm",
           repeatLast: "Repeat last workout",
           noPastData: "No data 🤷‍♂️",
           copySuccess: "Copied:",
@@ -478,7 +466,6 @@
           uiSettingsShop: "UI: Shop Mode",
           uiSettingsPressure: "UI: 120/80 Mode",
           uiSettingsCook: "UI: Cook Mode",
-          uiSettingsAlarm: "UI: Alarm Mode",
           itemHeight: "Item Height",
           itemWidth: "Item Width",
           itemSpacing: "Item Spacing",
@@ -716,8 +703,8 @@
         }
 
         const isScheduledDay = (d) => {
-          const dayOfWeek = d.getDay(); // 0-6
-          return [1, 3, 5].includes(dayOfWeek); // Mon, Wed, Fri
+          const dayOfWeek = d.getDay();
+          return [1, 3, 5].includes(dayOfWeek);
         };
 
         const handleDateClick = (d) => {
@@ -903,7 +890,7 @@
                     </div>
                   </div>
 
-                  <button onClick={() => handleDelete(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                  <button onClick={() => handleDelete(index)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -970,7 +957,6 @@
                 </button>
               </div>
 
-              {/* Tab Navigation */}
               <div className="px-6 pt-4 flex gap-2 overflow-x-auto no-scrollbar border-b border-slate-50 bg-white sticky top-[68px] z-10">
                 <button 
                   onClick={() => setActiveTab('general')}
@@ -978,7 +964,7 @@
                 >
                   {t.tabGeneral}
                 </button>
-                {activeMode !== 'pressure' && activeMode !== 'alarm' && (
+                {activeMode !== 'pressure' && (
                   <button 
                     onClick={() => setActiveTab('library')}
                     className={`pb-3 px-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === 'library' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
@@ -999,7 +985,6 @@
               <div className="p-6 flex flex-col gap-8">
                 {activeTab === 'general' && (
                   <React.Fragment>
-                    {/* Language Section */}
                     <div>
                       <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">{t.language}</label>
                       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
@@ -1008,10 +993,9 @@
                       </div>
                     </div>
 
-                    {/* UI Customization Section */}
                     <div className="flex flex-col gap-4">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        {activeMode === 'gym' ? t.uiSettingsGym : activeMode === 'shop' ? t.uiSettingsShop : activeMode === 'pressure' ? t.uiSettingsPressure : activeMode === 'cook' ? t.uiSettingsCook : t.uiSettingsAlarm}
+                        {activeMode === 'gym' ? t.uiSettingsGym : activeMode === 'shop' ? t.uiSettingsShop : activeMode === 'pressure' ? t.uiSettingsPressure : t.uiSettingsCook}
                       </label>
                       
                       <div className="space-y-4">
@@ -1033,7 +1017,7 @@
                           <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.fontSize}</span><span>{currentUISettings.fontSize}px</span></div>
                           <input type="range" min="8" max="24" step="1" value={currentUISettings.fontSize} onChange={(e) => updateUI('fontSize', parseInt(e.target.value))} />
                         </div>
-                        {(activeMode === 'shop' || activeMode === 'cook' || activeMode === 'alarm') && (
+                        {(activeMode === 'shop' || activeMode === 'cook') && (
                           <div>
                             <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.lineCount}</span><span>{currentUISettings.lineCount}</span></div>
                             <input type="range" min="1" max="6" step="1" value={currentUISettings.lineCount} onChange={(e) => updateUI('lineCount', parseInt(e.target.value))} />
@@ -1052,7 +1036,7 @@
                           <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          {(activeMode === 'gym' || activeMode === 'cook' || activeMode === 'alarm') && (
+                          {(activeMode === 'gym' || activeMode === 'cook') && (
                             <div className="flex items-center gap-3">
                               <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}><input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} /></div>
                               <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
@@ -1297,26 +1281,26 @@
         const hasSuggestions = showSuggestions && filteredSuggestions.length > 0;
 
         const itemStyles = {
-          height: isExpanded ? 'auto' : `${uiSettings.itemHeight + (mode === 'pressure' || mode === 'alarm' ? 12 : 0)}px`,
+          height: isExpanded ? 'auto' : `${uiSettings.itemHeight + (mode === 'pressure' ? 12 : 0)}px`,
           width: `${uiSettings.itemWidth}%`,
           marginBottom: `${uiSettings.itemSpacing}px`,
           backgroundColor: 'white',
           borderWidth: '1px',
           borderColor: '#e2e8f0',
-          zIndex: hasSuggestions ? 500 : (isExpanded ? 10 : 1), // Повышаем z-index при наличии подсказок
-          overflow: hasSuggestions ? 'visible' : 'hidden', // Позволяем подсказкам выходить за границы
+          zIndex: hasSuggestions ? 500 : (isExpanded ? 10 : 1),
+          overflow: hasSuggestions ? 'visible' : 'hidden',
           position: 'relative',
           paddingBottom: isExpanded ? '12px' : '0px'
         };
 
-        if (record.isCompleted && record.isHighlighted && (mode === 'gym' || mode === 'cook' || mode === 'alarm')) {
+        if (record.isCompleted && record.isHighlighted && (mode === 'gym' || mode === 'cook')) {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = uiSettings.highlightColor;
            itemStyles.boxShadow = `0 0 0 2px ${uiSettings.highlightColor} inset`;
         } else if (record.isCompleted) {
            itemStyles.backgroundColor = uiSettings.completedColor;
            itemStyles.borderColor = '#cbd5e1';
-        } else if (record.isHighlighted && (mode === 'gym' || mode === 'cook' || mode === 'alarm')) {
+        } else if (record.isHighlighted && (mode === 'gym' || mode === 'cook')) {
            itemStyles.backgroundColor = uiSettings.highlightColor;
            itemStyles.borderColor = '#cbd5e1';
         }
@@ -1331,7 +1315,7 @@
             onDragEnd={onDragEnd} 
             style={itemStyles} 
             onClick={toggleExpanded}
-            className={`mx-auto rounded-lg px-0.5 flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 ${isDragging ? 'dragging' : ''}`}
+            className={`rounded-lg px-0.5 flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 self-center ${isDragging ? 'dragging' : ''}`}
           >
             <div className="flex items-center w-full" style={{ height: `${uiSettings.itemHeight}px` }}>
               <div className="flex items-center drag-handle px-0.5 shrink-0 h-full" onClick={(e) => e.stopPropagation()}>
@@ -1339,7 +1323,7 @@
               </div>
               
               <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5" onClick={(e) => e.stopPropagation()}>
-                {(mode === 'gym' || mode === 'alarm') && (
+                {mode === 'gym' && (
                   <button onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)} className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}>
                     <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="4" /></svg>
                   </button>
@@ -1382,22 +1366,6 @@
                       <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                   </div>
-                ) : mode === 'alarm' ? (
-                  <div className="flex flex-col gap-0.5 w-full pr-1" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2 w-full">
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.dateLabel}</span>
-                        <input type="date" value={record.dateKey || ''} onChange={(e) => onUpdate(record.id, 'dateKey', e.target.value)} className="bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-[10px] font-black text-slate-800 focus:outline-none" />
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[7px] font-black uppercase text-slate-400 leading-none">{t.timeLabel}</span>
-                        <input type="time" value={record.notes || ''} onChange={(e) => onUpdate(record.id, 'notes', e.target.value)} className="bg-slate-50 border border-slate-100 rounded px-1 py-0.5 text-[10px] font-black text-slate-800 focus:outline-none" />
-                      </div>
-                    </div>
-                    <div className="mt-1">
-                      <textarea rows={uiSettings.lineCount || 1} value={record.description} onChange={(e) => onUpdate(record.id, 'description', e.target.value)} placeholder={t.alarmPlaceholder} style={{ fontSize: `${uiSettings.fontSize || 13}px` }} className={`font-bold bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight resize-none ${record.isCompleted ? 'opacity-40 text-slate-400' : 'text-slate-700'}`} />
-                    </div>
-                  </div>
                 ) : (
                   <div className="flex flex-col gap-0.5 w-full pr-1" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1.5 w-full">
@@ -1420,7 +1388,6 @@
                         </div>
                       </div>
                     </div>
-                    {/* Small line for comments */}
                     <div className="pl-1">
                       <input type="text" value={record.notes || ''} onBlur={() => handleBlur('notes')} onChange={(e) => onUpdate(record.id, 'notes', e.target.value)} placeholder={t.commentPlaceholder} style={{ fontSize: `${(uiSettings.fontSize || 12) - 2}px` }} className="font-black bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-none opacity-60 text-slate-500 truncate" />
                     </div>
@@ -1439,7 +1406,7 @@
             </div>
 
             {mode === 'cook' && (
-              <div className={`expanded-content px-10 ${isExpanded ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
+              <div className={`expanded-content px-2 ${isExpanded ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
                 <textarea 
                   ref={notesAreaRef}
                   value={record.notes || ''} 
@@ -1481,7 +1448,6 @@
           if (!saved) return [];
           try {
             const parsed = JSON.parse(saved);
-            // Migrate old string arrays to object arrays
             return parsed.map(item => typeof item === 'string' ? { name: item, enabled: false } : item);
           } catch(e) { return []; }
         });
@@ -1497,8 +1463,7 @@
             gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', weightColor: '#475569', fontSize: 13, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
             shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
             pressure: { itemHeight: 44, itemWidth: 100, itemSpacing: 10, highlightColor: '#f1f5f9', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true },
-            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
-            alarm: { itemHeight: 64, itemWidth: 100, itemSpacing: 12, highlightColor: '#eff6ff', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true }
+            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
           };
         });
         const [viewDate, setViewDate] = useState(new Date());
@@ -1521,47 +1486,10 @@
 
         const viewDateKey = useMemo(() => getDateKey(viewDate), [viewDate]);
 
-        // Request notification permissions
-        useEffect(() => {
-          if ("Notification" in window) {
-            Notification.requestPermission();
-          }
-        }, []);
-
-        // Alarm checking logic
-        useEffect(() => {
-          const checkAlarms = () => {
-            const currentTime = new Date();
-            const dateKey = getDateKey(currentTime);
-            const timeKey = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            
-            records.forEach(r => {
-              if (r.mode === 'alarm' && r.dateKey === dateKey && r.notes === timeKey && !r.isCompleted) {
-                if (Notification.permission === "granted") {
-                   new Notification(t.alarmName, {
-                     body: r.description || "Alarm!",
-                     icon: "https://cdn-icons-png.flaticon.com/512/2964/2964514.png"
-                   });
-                   // Mark as completed to avoid repeating in the same minute
-                   updateRecord(r.id, 'isCompleted', true);
-                } else {
-                  showToast(`${t.alarmName}: ${r.description}`, true);
-                  updateRecord(r.id, 'isCompleted', true);
-                }
-              }
-            });
-          };
-
-          const interval = setInterval(checkAlarms, 30000); // Check every 30 seconds
-          return () => clearInterval(interval);
-        }, [records, t]);
-
-        // Only manual entries
         const knownExercises = useMemo(() => {
           return Array.from(new Set(exerciseRegistry)).sort((a,b) => a.localeCompare(b));
         }, [exerciseRegistry]);
 
-        // Only manual entries AND only if enabled for current list
         const knownShopItems = useMemo(() => {
           const currentListConfig = shopListRegistry.find(l => l.name === shopListName);
           if (currentListConfig && currentListConfig.enabled) {
@@ -1588,8 +1516,6 @@
             return records.filter(r => r.dateKey === viewDateKey && r.mode === 'pressure');
           } else if (mode === 'cook') {
             return records.filter(r => r.mode === 'cook');
-          } else if (mode === 'alarm') {
-            return records.filter(r => r.mode === 'alarm');
           }
           return [];
         }, [records, viewDateKey, mode, shopListName]);
@@ -1664,7 +1590,7 @@
           const lists = allShopListsNames;
           const currentIndex = lists.indexOf(shopListName);
 
-          if (offset === 1) { // Next
+          if (offset === 1) {
             if (currentIndex === -1) { 
               if (lists.length > 0) setShopListName(lists[0]);
               else setShopListName("");
@@ -1673,7 +1599,7 @@
             } else {
               setShopListName(lists[currentIndex + 1]);
             }
-          } else { // Prev
+          } else {
             if (currentIndex === -1) { 
               if (lists.length > 0) setShopListName(lists[lists.length - 1]);
               else setShopListName("");
@@ -1686,7 +1612,7 @@
         };
 
         const toggleMode = () => { 
-          const modes = ['gym', 'shop', 'pressure', 'cook', 'alarm'];
+          const modes = ['gym', 'shop', 'pressure', 'cook'];
           const nextIdx = (modes.indexOf(mode) + 1) % modes.length;
           setMode(modes[nextIdx]); 
         };
@@ -1770,8 +1696,7 @@
               setShopListRegistry(prev => [...prev, { name: listNameToUse, enabled: false }]);
             }
           }
-          const defaultDate = getDateKey(new Date());
-          const newRecord = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: mode === 'alarm' ? '09:00' : '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: mode === 'cook' ? null : (mode === 'alarm' ? defaultDate : viewDateKey), mode: mode, listName: mode === 'shop' ? listNameToUse : null, sortOrder: records.length }; 
+          const newRecord = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: '', val1: '', val2: '', val3: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: mode === 'cook' ? null : viewDateKey, mode: mode, listName: mode === 'shop' ? listNameToUse : null, sortOrder: records.length }; 
           setRecords(prev => [...prev, newRecord]); 
         };
 
@@ -1781,7 +1706,6 @@
             else if (mode === 'shop') { setRecords(prev => prev.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName)))); }
             else if (mode === 'pressure') { setRecords(prev => prev.filter(r => !(r.dateKey === viewDateKey && r.mode === 'pressure'))); }
             else if (mode === 'cook') { setRecords(prev => prev.filter(r => r.mode !== 'cook')); }
-            else if (mode === 'alarm') { setRecords(prev => prev.filter(r => r.mode !== 'alarm')); }
             setIsClearConfirming(false); showToast(t.clearedToast, true); 
           } else { 
             setIsClearConfirming(true); 
@@ -1874,7 +1798,25 @@
           if (!isLongPressActive.current) { handleStartSession(); }
         };
 
-        const handleDragStart = (e, index) => { setDraggedIdx(index); setIsDraggingInProgress(true); };
+        const handleDragStart = (e, index) => { 
+          setDraggedIdx(index); 
+          setIsDraggingInProgress(true);
+          
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            // Set the drag image manually to avoid mobile offset issues
+            if (e.currentTarget) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const offsetX = e.clientX - rect.left;
+              const offsetY = e.clientY - rect.top;
+              // If clientX is 0 (some touch events), use middle of element
+              const x = e.clientX > 0 ? offsetX : rect.width / 2;
+              const y = e.clientY > 0 ? offsetY : rect.height / 2;
+              e.dataTransfer.setDragImage(e.currentTarget, x, y);
+            }
+          }
+        };
+
         const handleDragOver = (e, index) => { 
           e.preventDefault(); 
           if (draggedIdx === null || draggedIdx === index) return; 
@@ -1916,7 +1858,7 @@
             <header className="px-4 pt-3 pb-1 sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
               <div className="flex justify-between items-center mb-1.5 px-2 overflow-visible">
                 <h1 onClick={toggleMode} className="text-[17px] font-black text-slate-900 tracking-tight mode-toggle hover:scale-105 active:scale-95 transition-transform truncate flex-1 min-w-0">
-                    {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : mode === 'cook' ? t.cookName : t.alarmName}
+                    {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : t.cookName}
                 </h1>
                 {mode === 'gym' && (
                   <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-1.5 py-0.5 mx-2 shrink-0">
@@ -1975,18 +1917,18 @@
                   </React.Fragment>
                 ) : (
                     <div className="flex-1 flex justify-center">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{mode === 'cook' ? t.cookName : t.alarmName}</span>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{t.cookName}</span>
                     </div>
                 )}
               </div>
             </header>
 
-            <main className="px-4 pb-12 pt-1.5 flex flex-col items-start">
-              <div className="w-full">
+            <main className="px-4 pb-12 pt-1.5 flex flex-col items-center">
+              <div className="w-full flex flex-col gap-0 items-center">
                 {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
               </div>
-              <div className="flex flex-col gap-3 mt-1.5 ml-1 w-full pr-1">
-                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : mode === 'cook' ? t.addRecipe : t.addAlarm}</span></button>
+              <div className="flex flex-col gap-3 mt-1.5 w-full max-w-[95%]">
+                <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : t.addRecipe}</span></button>
                 {currentRecords.length === 0 && mode === 'gym' && (<button onClick={copyFromLastWorkout} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg mb-0.5"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg><span className="text-sm font-bold">{t.repeatLast}</span></button>)}
                 {currentRecords.length > 0 && (<button onClick={deleteAllForCurrentContext} className={`action-button w-full h-11 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all ${isClearConfirming ? 'bg-red-500 text-white scale-[1.02]' : 'bg-white text-slate-400 border border-slate-200'}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{isClearConfirming ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />)}</svg><span className="text-xs font-bold uppercase tracking-wider">{isClearConfirming ? t.clearConfirm : t.clearBtn}</span></button>)}
               </div>
