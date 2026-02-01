@@ -62,7 +62,6 @@
         will-change: transform, opacity;
       }
       
-      /* Removed scale transform to prevent jump during drag initialization */
       .tracker-item.dragging {
         opacity: 0.1;
         box-shadow: none;
@@ -349,6 +348,7 @@
           shopPlaceholder: "Купить...",
           cookPlaceholder: "Название рецепта...",
           recipeContentPlaceholder: "Ингредиенты и способ приготовления...",
+          cookSearchPlaceholder: "Поиск рецепта...",
           savedToast: "Сохранено 💾",
           errorToast: "Ошибка ⚠️",
           exportToast: "Экспорт 📤",
@@ -443,6 +443,7 @@
           shopPlaceholder: "Buy...",
           cookPlaceholder: "Recipe title...",
           recipeContentPlaceholder: "Ingredients and instructions...",
+          cookSearchPlaceholder: "Search recipe...",
           savedToast: "Saved 💾",
           errorToast: "Error ⚠️",
           exportToast: "Exported 📤",
@@ -1309,17 +1310,19 @@
 
         return (
           <div 
-            draggable="true" 
-            onDragStart={(e) => onDragStart(e, index)} 
-            onDragOver={(e) => onDragOver(e, index)} 
-            onDragEnd={onDragEnd} 
+            draggable={mode !== 'cook'} 
+            onDragStart={mode !== 'cook' ? (e) => onDragStart(e, index) : null} 
+            onDragOver={mode !== 'cook' ? (e) => onDragOver(e, index) : null} 
+            onDragEnd={mode !== 'cook' ? onDragEnd : null} 
             style={itemStyles} 
             onClick={toggleExpanded}
             className={`rounded-lg px-0.5 flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 self-center ${isDragging ? 'dragging' : ''}`}
           >
             <div className="flex items-center w-full" style={{ height: `${uiSettings.itemHeight}px` }}>
-              <div className="flex items-center drag-handle px-0.5 shrink-0 h-full" onClick={(e) => e.stopPropagation()}>
-                <div className="flex flex-col gap-0.5 opacity-20">{[1, 2, 3].map(i => (<div key={i} className="flex gap-0.5"><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div></div>))}</div>
+              <div className={`flex items-center ${mode !== 'cook' ? 'drag-handle' : ''} px-0.5 shrink-0 h-full`} onClick={(e) => e.stopPropagation()}>
+                <div className={`flex flex-col gap-0.5 ${mode !== 'cook' ? 'opacity-20' : 'opacity-10'}`}>
+                  {[1, 2, 3].map(i => (<div key={i} className="flex gap-0.5"><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div></div>))}
+                </div>
               </div>
               
               <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5" onClick={(e) => e.stopPropagation()}>
@@ -1455,6 +1458,7 @@
         const t = useMemo(() => i18n[language], [language]);
 
         const [shopListName, setShopListName] = useState(localStorage.getItem('gt_shop_list_name') || "");
+        const [cookSearchQuery, setCookSearchQuery] = useState("");
         
         const [uiSettings, setUiSettings] = useState(() => {
           const saved = localStorage.getItem('gt_ui_settings_v5');
@@ -1515,10 +1519,20 @@
           } else if (mode === 'pressure') {
             return records.filter(r => r.dateKey === viewDateKey && r.mode === 'pressure');
           } else if (mode === 'cook') {
-            return records.filter(r => r.mode === 'cook');
+            let filtered = records.filter(r => r.mode === 'cook');
+            if (cookSearchQuery.trim()) {
+              const query = cookSearchQuery.toLowerCase();
+              filtered = filtered.filter(r => r.description.toLowerCase().includes(query));
+            }
+            // Sort recipes alphabetically by description
+            return filtered.sort((a, b) => {
+              const descA = a.description || "";
+              const descB = b.description || "";
+              return descA.localeCompare(descB, language === 'ru' ? 'ru' : 'en', { sensitivity: 'base' });
+            });
           }
           return [];
-        }, [records, viewDateKey, mode, shopListName]);
+        }, [records, viewDateKey, mode, shopListName, cookSearchQuery, language]);
 
         const currentWeight = weights[viewDateKey] || '';
         const displayDate = viewDate.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -1615,6 +1629,8 @@
           const modes = ['gym', 'shop', 'pressure', 'cook'];
           const nextIdx = (modes.indexOf(mode) + 1) % modes.length;
           setMode(modes[nextIdx]); 
+          // Reset search query when switching mode
+          setCookSearchQuery("");
         };
 
         const handleManualSave = async () => { 
@@ -1804,12 +1820,10 @@
           
           if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'move';
-            // Set the drag image manually to avoid mobile offset issues
             if (e.currentTarget) {
               const rect = e.currentTarget.getBoundingClientRect();
               const offsetX = e.clientX - rect.left;
               const offsetY = e.clientY - rect.top;
-              // If clientX is 0 (some touch events), use middle of element
               const x = e.clientX > 0 ? offsetX : rect.width / 2;
               const y = e.clientY > 0 ? offsetY : rect.height / 2;
               e.dataTransfer.setDragImage(e.currentTarget, x, y);
@@ -1916,8 +1930,31 @@
                     </button>
                   </React.Fragment>
                 ) : (
-                    <div className="flex-1 flex justify-center">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{t.cookName}</span>
+                    <div className="flex-1 flex items-center px-3 gap-2">
+                       <div className="flex-1 relative">
+                          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                            <svg className="h-3 w-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <input 
+                            type="text" 
+                            value={cookSearchQuery}
+                            onChange={(e) => setCookSearchQuery(e.target.value)}
+                            placeholder={t.cookSearchPlaceholder}
+                            className="block w-full pl-7 bg-slate-100/50 border-none rounded-lg py-1.5 text-xs font-black text-slate-900 focus:ring-0 placeholder:text-slate-300 transition-all"
+                          />
+                          {cookSearchQuery && (
+                            <button 
+                              onClick={() => setCookSearchQuery('')}
+                              className="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 active:text-slate-900"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                       </div>
                     </div>
                 )}
               </div>
