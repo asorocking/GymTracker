@@ -1,8 +1,9 @@
 
 {
   "short_name": "TrackerPro",
-  "name": "Tracker Pro - All-in-One Tracker",
-  "id": "tracker-pro-pwa-v4",
+  "name": "Tracker Pro - Мобильный трекер",
+  "description": "Универсальный трекер тренировок, покупок и здоровья.",
+  "id": "tracker-pro-pwa-v5",
   "icons": [
     {
       "src": "https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D",
@@ -23,10 +24,13 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "scope": "/",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "theme_color": "#f8fafc",
+  "display_override": ["window-controls-overlay", "minimal-ui"],
+  "theme_color": "#0f172a",
   "background_color": "#f8fafc",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "categories": ["fitness", "lifestyle", "productivity"],
+  "prefer_related_applications": false
 }
