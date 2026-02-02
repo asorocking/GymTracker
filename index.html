@@ -7,17 +7,17 @@
     <meta name="theme-color" content="#f8fafc" />
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
+    <link rel="icon" type="image/webp" href="https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D" />
+    <link rel="apple-touch-icon" href="https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D" />
     
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="GymTracker" />
+    <meta name="apple-mobile-web-app-title" content="TrackerPro" />
     
-    <title>GymTracker Pro</title>
+    <title>Tracker Pro</title>
     
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
@@ -671,9 +671,9 @@
         const startDay = firstDayOfMonth(month, year);
 
         // Previous month filler
-        const prevMonth = new Date(year, month - 1, 1);
-        const prevMonthDaysCount = daysInMonth(prevMonth.getMonth(), prevMonth.getFullYear());
         for (let i = startDay - 1; i >= 0; i--) {
+          const prevMonth = new Date(year, month - 1, 1);
+          const prevMonthDaysCount = daysInMonth(prevMonth.getMonth(), prevMonth.getFullYear());
           calendarDays.push({
             day: prevMonthDaysCount - i,
             month: month - 1,
@@ -891,7 +891,7 @@
                     </div>
                   </div>
 
-                  <button onClick={() => handleDelete(index)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                  <button onClick={() => handleDelete(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -1319,11 +1319,13 @@
             className={`rounded-lg px-0.5 flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 self-center ${isDragging ? 'dragging' : ''}`}
           >
             <div className="flex items-center w-full" style={{ height: `${uiSettings.itemHeight}px` }}>
-              <div className={`flex items-center ${mode !== 'cook' ? 'drag-handle' : ''} px-0.5 shrink-0 h-full`} onClick={(e) => e.stopPropagation()}>
-                <div className={`flex flex-col gap-0.5 ${mode !== 'cook' ? 'opacity-20' : 'opacity-10'}`}>
-                  {[1, 2, 3].map(i => (<div key={i} className="flex gap-0.5"><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div></div>))}
+              {mode !== 'cook' && (
+                <div className="flex items-center drag-handle px-0.5 shrink-0 h-full" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col gap-0.5 opacity-20">
+                    {[1, 2, 3].map(i => (<div key={i} className="flex gap-0.5"><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div><div className="w-0.5 h-0.5 bg-slate-900 rounded-full"></div></div>))}
+                  </div>
                 </div>
-              </div>
+              )}
               
               <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5" onClick={(e) => e.stopPropagation()}>
                 {mode === 'gym' && (
@@ -1332,13 +1334,13 @@
                   </button>
                 )}
                 {mode !== 'pressure' && mode !== 'cook' && (
-                  <button onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)} className={`p-0.5 transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}>
-                    <svg className="w-3.5 h-3.5" fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M5 13l4 4L19 7" /></svg>
+                  <button onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)} className={`${mode === 'shop' ? 'p-1.5' : 'p-0.5'} transition-all active:scale-90 ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}>
+                    <svg className={`${mode === 'shop' ? 'w-6 h-6' : 'w-3.5 h-3.5'}`} fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={mode === 'shop' ? 3.5 : 6} d="M5 13l4 4L19 7" /></svg>
                   </button>
                 )}
               </div>
               
-              <div className="flex-1 min-w-0 h-full flex flex-col justify-center gap-0 ml-1 relative">
+              <div className={`flex-1 min-w-0 h-full flex flex-col justify-center gap-0 relative ${mode === 'cook' ? 'ml-3' : 'ml-1'}`}>
                 {mode === 'gym' ? (
                   <React.Fragment>
                     <div className="flex items-center gap-1.5 pr-1">
@@ -1365,8 +1367,8 @@
                       <input ref={textRef} type="text" value={record.description} onFocus={() => setShowSuggestions(true)} onBlur={() => handleBlur('description')} onChange={(e) => { onUpdate(record.id, 'description', e.target.value); setShowSuggestions(true); }} placeholder={t.cookPlaceholder} style={{ fontSize: `${uiSettings.fontSize || 14}px` }} className={`font-black bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight truncate ${record.isCompleted ? 'opacity-50' : 'text-slate-800'}`} />
                       {hasSuggestions && (<div className="suggestions-list" ref={suggestionsRef}>{filteredSuggestions.map(s => (<div key={s} onMouseDown={() => handleSuggestionClick(s)} className="suggestion-item">{s}</div>))}</div>)}
                     </div>
-                    <div className="shrink-0 p-1 text-slate-400">
-                      <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    <div className="shrink-0 p-2 text-slate-400">
+                      <svg className={`w-6 h-6 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                   </div>
                 ) : (
@@ -1814,8 +1816,8 @@
           if (!isLongPressActive.current) { handleStartSession(); }
         };
 
-        const handleDragStart = (e, index) => { 
-          setDraggedIdx(index); 
+        const handleDragStart = (e, idx) => { 
+          setDraggedIdx(idx); 
           setIsDraggingInProgress(true);
           
           if (e.dataTransfer) {
@@ -1831,11 +1833,11 @@
           }
         };
 
-        const handleDragOver = (e, index) => { 
+        const handleDragOver = (e, idx) => { 
           e.preventDefault(); 
-          if (draggedIdx === null || draggedIdx === index) return; 
+          if (draggedIdx === null || draggedIdx === idx) return; 
           const itemMoving = currentRecords[draggedIdx]; 
-          const targetItem = currentRecords[index]; 
+          const targetItem = currentRecords[idx]; 
           setRecords(prev => { 
             const next = [...prev]; 
             const idxM = next.findIndex(r => r.id === itemMoving.id); 
@@ -1845,7 +1847,7 @@
             next.splice(idxT, 0, removed); 
             return next.map((r, i) => ({ ...r, sortOrder: i }));
           }); 
-          setDraggedIdx(index); 
+          setDraggedIdx(idx); 
         };
         const handleDragEnd = () => { setDraggedIdx(null); setIsDraggingInProgress(false); };
 
@@ -1870,7 +1872,7 @@
             />
 
             <header className="sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
-              {/* Quick Mode Nav - Reduced height */}
+              {/* Quick Mode Nav */}
               <div className="px-4 pt-1.5 pb-1">
                 <div className="grid grid-cols-4 gap-1 bg-slate-200/40 p-0.5 rounded-lg">
                   {['gym', 'shop', 'pressure', 'cook'].map((m) => (
@@ -1887,7 +1889,7 @@
                 </div>
               </div>
 
-              {/* Title & Buttons Row - Reduced height and sizes */}
+              {/* Title & Buttons Row */}
               <div className="px-4 flex justify-between items-center mb-0.5 overflow-visible h-9">
                 <h1 className="text-[15px] font-black text-slate-900 tracking-tight transition-transform truncate flex-1 min-w-0">
                     {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : t.cookName}

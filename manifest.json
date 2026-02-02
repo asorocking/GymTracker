@@ -1,25 +1,25 @@
 
 {
-  "short_name": "GymTracker",
-  "name": "GymTracker Pro Workout",
-  "id": "gymtracker-pwa-v3",
+  "short_name": "TrackerPro",
+  "name": "Tracker Pro - All-in-One Tracker",
+  "id": "tracker-pro-pwa-v4",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2648/2648234.png",
+      "src": "https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2648/2648234.png",
+      "src": "https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2648/2648234.png",
+      "src": "https://files.oaiusercontent.com/file-DAn2Wc6gC9fV9Uu2o8G18S?se=2025-01-29T16%3A32%3A08Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D604800%2C%20private%2C%20immutable%2C%20proxy-revalidate&rscd=attachment%3B%20filename%3D17f1a0ba-a11f-449e-b816-d3450917637f.webp&sig=G0wJ%2B/D8L9X/8wWOnN/VInpYvLpA6m%2BzU907hI9N9nU%3D",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/webp",
       "purpose": "maskable"
     }
   ],
