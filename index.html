@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#f8fafc" />
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3503/3503117.png" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3503/3503117.png" />
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
     
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json" />
@@ -381,6 +381,7 @@
           itemSpacing: "Интервал между записями",
           colorHighlight: "Сет/Акцент",
           colorCompleted: "Готово",
+          bgColor: "Цвет фона",
           weightColor: "Цвет шрифта веса",
           fontSize: "Размер шрифта",
           lineCount: "Число строк в записи",
@@ -476,6 +477,7 @@
           itemSpacing: "Item Spacing",
           colorHighlight: "Set Color",
           colorCompleted: "Done Color",
+          bgColor: "Background Color",
           weightColor: "Weight font color",
           fontSize: "Font Size",
           lineCount: "Number of Lines",
@@ -921,7 +923,7 @@
 
         if (!isOpen) return null;
 
-        const currentUISettings = uiSettings[activeMode];
+        const currentUISettings = uiSettings[activeMode] || {};
 
         const updateUI = (key, val) => {
           setUiSettings(prev => ({
@@ -934,7 +936,7 @@
         };
 
         const getRegistryConfig = () => {
-          if (activeMode === 'gym' || activeMode === 'gym') return { items: exerciseRegistry, setter: setExerciseRegistry, title: t.exerciseLibrary };
+          if (activeMode === 'gym') return { items: exerciseRegistry, setter: setExerciseRegistry, title: t.exerciseLibrary };
           if (activeMode === 'shop') return { items: shopRegistry, setter: setShopRegistry, title: t.shopLibrary };
           if (activeMode === 'cook') return { items: cookRegistry, setter: setCookRegistry, title: t.cookLibrary };
           return null;
@@ -962,17 +964,18 @@
                 </button>
               </div>
 
-              <div className="px-6 pt-4 flex gap-2 overflow-x-auto no-scrollbar border-b border-slate-50 bg-white sticky top-[68px] z-10">
+              {/* Tabs with flex-1 for equal width and visibility */}
+              <div className="px-6 pt-4 flex border-b border-slate-50 bg-white sticky top-[68px] z-10">
                 <button 
                   onClick={() => setActiveTab('general')}
-                  className={`pb-3 px-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === 'general' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
+                  className={`flex-1 pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-center transition-all border-b-2 ${activeTab === 'general' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
                 >
                   {t.tabGeneral}
                 </button>
                 {activeMode !== 'pressure' && (
                   <button 
                     onClick={() => setActiveTab('library')}
-                    className={`pb-3 px-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === 'library' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
+                    className={`flex-1 pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-center transition-all border-b-2 ${activeTab === 'library' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
                   >
                     {activeMode === 'gym' ? t.tabLibraryGym : activeMode === 'shop' ? t.tabLibraryShop : t.tabLibraryCook}
                   </button>
@@ -980,7 +983,7 @@
                 {activeMode === 'shop' && (
                   <button 
                     onClick={() => setActiveTab('lists')}
-                    className={`pb-3 px-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border-b-2 ${activeTab === 'lists' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
+                    className={`flex-1 pb-3 px-1 text-[10px] font-black uppercase tracking-widest text-center transition-all border-b-2 ${activeTab === 'lists' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400'}`}
                   >
                     {t.tabLists}
                   </button>
@@ -1041,16 +1044,20 @@
                           <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.backgroundColor || '#f8fafc' }}><input type="color" value={currentUISettings.backgroundColor || '#f8fafc'} onChange={(e) => updateUI('backgroundColor', e.target.value)} /></div>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">{t.bgColor}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}><input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} /></div>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorCompleted}</span>
+                          </div>
                           {(activeMode === 'gym' || activeMode === 'cook') && (
                             <div className="flex items-center gap-3">
                               <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}><input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} /></div>
                               <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-3">
-                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}><input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} /></div>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorCompleted}</span>
-                          </div>
                           {activeMode === 'gym' && (
                             <div className="flex items-center gap-3">
                               <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.weightColor }}><input type="color" value={currentUISettings.weightColor} onChange={(e) => updateUI('weightColor', e.target.value)} /></div>
@@ -1335,7 +1342,7 @@
                 </div>
               )}
               
-              <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5 flex" onClick={(e) => e.stopPropagation()}>
                 {mode === 'gym' && (
                   <button onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)} className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}>
                     <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="4" /></svg>
@@ -1468,13 +1475,13 @@
         const [cookSearchQuery, setCookSearchQuery] = useState("");
         
         const [uiSettings, setUiSettings] = useState(() => {
-          const saved = localStorage.getItem('gt_ui_settings_v5');
+          const saved = localStorage.getItem('gt_ui_settings_v6');
           if (saved) return JSON.parse(saved);
           return {
-            gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#f1f5f9', completedColor: '#ecfdf5', weightColor: '#475569', fontSize: 13, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
-            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
-            pressure: { itemHeight: 44, itemWidth: 100, itemSpacing: 10, highlightColor: '#f1f5f9', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true },
-            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
+            gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, backgroundColor: '#f8fafc', highlightColor: '#f1f5f9', completedColor: '#ecfdf5', weightColor: '#475569', fontSize: 13, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
+            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, backgroundColor: '#fff1f2', highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
+            pressure: { itemHeight: 44, itemWidth: 100, itemSpacing: 10, backgroundColor: '#f0f9ff', highlightColor: '#f1f5f9', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true },
+            cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, backgroundColor: '#fffbeb', highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
           };
         });
         const [viewDate, setViewDate] = useState(new Date());
@@ -1560,7 +1567,7 @@
 
         useEffect(() => { localStorage.setItem('gt_lang', language); }, [language]);
         useEffect(() => { localStorage.setItem('gt_mode', mode); }, [mode]);
-        useEffect(() => { localStorage.setItem('gt_ui_settings_v5', JSON.stringify(uiSettings)); }, [uiSettings]);
+        useEffect(() => { localStorage.setItem('gt_ui_settings_v6', JSON.stringify(uiSettings)); }, [uiSettings]);
         useEffect(() => { localStorage.setItem('gt_shop_list_name', shopListName); }, [shopListName]);
         useEffect(() => { localStorage.setItem('gt_shop_list_registry', JSON.stringify(shopListRegistry)); }, [shopListRegistry]);
         useEffect(() => { localStorage.setItem('gt_exercise_registry', JSON.stringify(exerciseRegistry)); }, [exerciseRegistry]);
@@ -1598,7 +1605,7 @@
         }, [records, isLoaded, isDraggingInProgress]);
 
         const showToast = (message, force = false) => { 
-          const currentSettings = uiSettings[mode];
+          const currentSettings = uiSettings[mode] || {};
           if (!force && currentSettings.enableToasts === false) return;
           setToast({ show: true, message }); 
           const duration = (currentSettings.toastDuration || 3) * 1000;
@@ -1861,8 +1868,10 @@
         const sessionStartActive = !!sessions[viewDateKey]?.start && !sessions[viewDateKey]?.end;
         const sessionPaused = !!sessions[viewDateKey]?.start && !!sessions[viewDateKey]?.end;
 
+        const currentAppBg = uiSettings[mode]?.backgroundColor || '#f8fafc';
+
         return (
-          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10">
+          <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10 transition-colors duration-500" style={{ backgroundColor: currentAppBg }}>
             <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.message}</div>
             <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} weights={weights} records={records} knownExercises={knownExercises} t={t} />
             <CalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} selectedDate={viewDate} setSelectedDate={setViewDate} records={records} t={t} />
@@ -1876,7 +1885,7 @@
                 onRenameShopList={onRenameShopList} clearRegistry={clearRegistryOfEmptyLists} t={t} 
             />
 
-            <header className="sticky top-0 bg-slate-50/95 backdrop-blur-md z-40 border-b border-slate-100">
+            <header className="sticky top-0 z-40 border-b border-slate-100/50 backdrop-blur-md" style={{ backgroundColor: `${currentAppBg}f2` }}>
               {/* Quick Mode Nav - Reduced height */}
               <div className="px-4 pt-1.5 pb-1">
                 <div className="grid grid-cols-4 gap-1 bg-slate-200/40 p-0.5 rounded-lg">
@@ -1989,7 +1998,7 @@
 
             <main className="px-4 pb-12 pt-1.5 flex flex-col items-center">
               <div className="w-full flex flex-col gap-0 items-center">
-                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleStartSession} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
+                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleStartSession} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode] || {}} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
               </div>
               <div className="flex flex-col gap-3 mt-1.5 w-full max-w-[95%]">
                 <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : t.addRecipe}</span></button>
