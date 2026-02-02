@@ -897,7 +897,7 @@
                     </div>
                   </div>
 
-                  <button onClick={() => handleDelete(index)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                  <button onClick={() => handleDelete(idx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -1490,6 +1490,7 @@
         const [isStatsOpen, setIsStatsOpen] = useState(false);
         const [isCalendarOpen, setIsCalendarOpen] = useState(false);
         const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+        const [isListDropdownOpen, setIsListDropdownOpen] = useState(false);
         const [draggedIdx, setDraggedIdx] = useState(null);
         const [isDraggingInProgress, setIsDraggingInProgress] = useState(false);
         const [isClearConfirming, setIsClearConfirming] = useState(false);
@@ -1645,6 +1646,7 @@
           setMode(modes[nextIdx]); 
           // Reset search query when switching mode
           setCookSearchQuery("");
+          setIsListDropdownOpen(false);
         };
 
         const handleManualSave = async () => { 
@@ -1892,7 +1894,7 @@
                   {['gym', 'shop', 'pressure', 'cook'].map((m) => (
                     <button
                       key={m}
-                      onClick={() => { setMode(m); setCookSearchQuery(""); }}
+                      onClick={() => { setMode(m); setCookSearchQuery(""); setIsListDropdownOpen(false); }}
                       className={`py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 ${
                         mode === m ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
                       }`}
@@ -1905,9 +1907,42 @@
 
               {/* Title & Buttons Row - Reduced height and sizes */}
               <div className="px-4 flex justify-between items-center mb-0.5 overflow-visible h-9">
-                <h1 className="text-[15px] font-black text-slate-900 tracking-tight transition-transform truncate flex-1 min-w-0">
-                    {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : t.cookName}
-                </h1>
+                <div className="relative flex-1 min-w-0 h-full flex items-center">
+                  <button 
+                    onClick={() => mode === 'shop' && setIsListDropdownOpen(!isListDropdownOpen)}
+                    className={`flex items-center gap-1.5 text-[15px] font-black text-slate-900 tracking-tight transition-all truncate pr-2 ${mode === 'shop' ? 'hover:opacity-60 active:scale-95' : 'cursor-default'}`}
+                  >
+                      {mode === 'gym' ? t.appName : mode === 'shop' ? t.shopName : mode === 'pressure' ? t.pressureName : t.cookName}
+                      {mode === 'shop' && (
+                        <svg className={`w-3 h-3 text-slate-400 transition-transform ${isListDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                  </button>
+                  
+                  {isListDropdownOpen && mode === 'shop' && (
+                    <React.Fragment>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsListDropdownOpen(false)}></div>
+                      <div className="absolute top-full left-0 mt-1 w-56 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden fade-in py-1">
+                        <div className="max-h-64 overflow-y-auto no-scrollbar">
+                          {allShopListsNames.length > 0 ? allShopListsNames.map(name => (
+                            <button
+                              key={name}
+                              onClick={(e) => { e.stopPropagation(); setShopListName(name); setIsListDropdownOpen(false); }}
+                              className={`w-full text-left px-4 py-3.5 text-xs font-black transition-colors flex items-center justify-between border-b border-slate-50 last:border-0 ${shopListName === name ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                              <span className="truncate flex-1 pr-2">{name}</span>
+                              {shopListName === name && <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                            </button>
+                          )) : (
+                            <div className="px-4 py-5 text-[9px] font-black text-slate-400 italic text-center uppercase tracking-widest">{t.libraryEmpty}</div>
+                          )}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  )}
+                </div>
+
                 {mode === 'gym' && (
                   <div className="flex items-center gap-1 bg-slate-200/50 rounded-lg px-1.5 py-0.5 mx-1 shrink-0">
                     <span className="text-[7px] font-bold text-slate-500 uppercase tracking-tighter">{t.weight}</span>
