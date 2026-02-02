@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#f8fafc" />
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" />
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" />
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2648/2648234.png" />
     
     <!-- PWA Settings -->
     <link rel="manifest" href="manifest.json" />
@@ -1982,7 +1982,7 @@
 
             <main className="px-4 pb-12 pt-1.5 flex flex-col items-center">
               <div className="w-full flex flex-col gap-0 items-center">
-                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
+                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleStartSession} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode]} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
               </div>
               <div className="flex flex-col gap-3 mt-1.5 w-full max-w-[95%]">
                 <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : t.addRecipe}</span></button>
