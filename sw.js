@@ -1,9 +1,9 @@
-
-const CACHE_NAME = 'gymtracker-v6';
+const CACHE_NAME = 'gymtracker-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
+  './list.png',
   'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
   'https://cdn.tailwindcss.com',
