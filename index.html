@@ -190,20 +190,29 @@
         margin-top: -6px;
       }
 
+      /* Native Color Picker Styling for Android Feeling */
       .color-picker-wrapper {
         position: relative;
-        width: 32px;
-        height: 32px;
+        width: 44px; /* Optimal touch target for Android */
+        height: 44px;
         border-radius: 50%;
         border: 2px solid #e2e8f0;
         overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+      .color-picker-wrapper:active {
+        transform: scale(0.9);
       }
       .color-picker-wrapper input[type="color"] {
         position: absolute;
         top: -10px;
         left: -10px;
-        width: 50px;
-        height: 50px;
+        width: 64px;
+        height: 64px;
+        border: none;
+        padding: 0;
         cursor: pointer;
       }
 
@@ -1043,26 +1052,39 @@
                           <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.itemSpacing}</span><span>{currentUISettings.itemSpacing}px</span></div>
                           <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.backgroundColor || '#f8fafc' }}><input type="color" value={currentUISettings.backgroundColor || '#f8fafc'} onChange={(e) => updateUI('backgroundColor', e.target.value)} /></div>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">{t.bgColor}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}><input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} /></div>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorCompleted}</span>
-                          </div>
+
+                        {/* Android Optimized Native Color Selection Grid */}
+                        <div className="grid grid-cols-2 gap-y-6 gap-x-4 pt-4 border-t border-slate-50">
+                          <label className="flex flex-col items-center gap-2 cursor-pointer">
+                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.backgroundColor || '#f8fafc' }}>
+                              <input type="color" value={currentUISettings.backgroundColor || '#f8fafc'} onChange={(e) => updateUI('backgroundColor', e.target.value)} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.bgColor}</span>
+                          </label>
+
+                          <label className="flex flex-col items-center gap-2 cursor-pointer">
+                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}>
+                              <input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.colorCompleted}</span>
+                          </label>
+
                           {(activeMode === 'gym' || activeMode === 'cook') && (
-                            <div className="flex items-center gap-3">
-                              <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}><input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} /></div>
-                              <span className="text-[10px] font-bold text-slate-500 uppercase">{t.colorHighlight}</span>
-                            </div>
+                            <label className="flex flex-col items-center gap-2 cursor-pointer">
+                              <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}>
+                                <input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} />
+                              </div>
+                              <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.colorHighlight}</span>
+                            </label>
                           )}
+
                           {activeMode === 'gym' && (
-                            <div className="flex items-center gap-3">
-                              <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.weightColor }}><input type="color" value={currentUISettings.weightColor} onChange={(e) => updateUI('weightColor', e.target.value)} /></div>
-                              <span className="text-[10px] font-bold text-slate-500 uppercase">{t.weightColor}</span>
-                            </div>
+                            <label className="flex flex-col items-center gap-2 cursor-pointer">
+                              <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.weightColor }}>
+                                <input type="color" value={currentUISettings.weightColor} onChange={(e) => updateUI('weightColor', e.target.value)} />
+                              </div>
+                              <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.weightColor}</span>
+                            </label>
                           )}
                         </div>
                       </div>
@@ -1384,7 +1406,7 @@
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-0.5 w-full pr-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col gap-0 w-full pr-1" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1.5 w-full">
                       <div className="flex flex-col items-start gap-0.5 mr-1">
                         <span className="text-[8px] font-black uppercase text-slate-400 leading-none">{t.timeLabel}</span>
@@ -1405,8 +1427,8 @@
                         </div>
                       </div>
                     </div>
-                    <div className="pl-1">
-                      <input type="text" value={record.notes || ''} onBlur={() => handleBlur('notes')} onChange={(e) => onUpdate(record.id, 'notes', e.target.value)} placeholder={t.commentPlaceholder} style={{ fontSize: `${(uiSettings.fontSize || 12) - 2}px` }} className="font-black bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-none opacity-60 text-slate-500 truncate" />
+                    <div className="pl-1 -mt-0.5">
+                      <input type="text" value={record.notes || ''} onBlur={() => handleBlur('notes')} onChange={(e) => onUpdate(record.id, 'notes', e.target.value)} placeholder={t.commentPlaceholder} style={{ fontSize: `${(uiSettings.fontSize || 12) - 3}px` }} className="font-black bg-transparent border-none outline-none focus:ring-0 placeholder:text-slate-300 w-full p-0 m-0 leading-tight opacity-50 text-slate-500 truncate" />
                     </div>
                   </div>
                 )}
@@ -1840,8 +1862,9 @@
               const rect = e.currentTarget.getBoundingClientRect();
               const offsetX = e.clientX - rect.left;
               const offsetY = e.clientY - rect.top;
-              const x = e.clientX > 0 ? offsetX : rect.width / 2;
-              const y = e.clientY > 0 ? offsetY : rect.height / 2;
+              // Provide a fallback in case coordinate properties are weird on some mobile browsers
+              const x = (e.clientX && e.clientX > 0) ? offsetX : rect.width / 2;
+              const y = (e.clientY && e.clientY > 0) ? offsetY : rect.height / 2;
               e.dataTransfer.setDragImage(e.currentTarget, x, y);
             }
           }
@@ -1850,8 +1873,12 @@
         const handleDragOver = (e, index) => { 
           e.preventDefault(); 
           if (draggedIdx === null || draggedIdx === index) return; 
+          
           const itemMoving = currentRecords[draggedIdx]; 
           const targetItem = currentRecords[index]; 
+          
+          if (!itemMoving || !targetItem) return;
+
           setRecords(prev => { 
             const next = [...prev]; 
             const idxM = next.findIndex(r => r.id === itemMoving.id); 
@@ -1863,7 +1890,10 @@
           }); 
           setDraggedIdx(index); 
         };
-        const handleDragEnd = () => { setDraggedIdx(null); setIsDraggingInProgress(false); };
+        const handleDragEnd = () => { 
+          setDraggedIdx(null); 
+          setIsDraggingInProgress(false); 
+        };
 
         if (!isLoaded) return null;
 
@@ -2033,7 +2063,7 @@
 
             <main className="px-4 pb-12 pt-1.5 flex flex-col items-center">
               <div className="w-full flex flex-col gap-0 items-center">
-                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleStartSession} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode] || {}} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
+                {currentRecords.map((r, idx) => (<TrackerItem key={r.id} record={r} index={idx} onDelete={deleteRecord} onUpdate={updateRecord} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} isDragging={draggedIdx === idx} uiSettings={uiSettings[mode] || {}} mode={mode} knownItems={mode === 'gym' ? knownExercises : mode === 'shop' ? knownShopItems : mode === 'cook' ? knownCookItems : []} t={t} />))}
               </div>
               <div className="flex flex-col gap-3 mt-1.5 w-full max-w-[95%]">
                 <button onClick={addNewRecord} className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v12m6-6H6" /></svg><span className="text-sm font-bold">{mode === 'gym' ? t.addExercise : mode === 'shop' ? t.addItem : mode === 'pressure' ? t.addPressure : t.addRecipe}</span></button>
