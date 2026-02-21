@@ -22,8 +22,8 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "scope": "/",
+  "start_url": "/GymTracker/",
+  "scope": "/GymTracker/",
   "display": "standalone",
   "theme_color": "#f8fafc",
   "background_color": "#f8fafc",
