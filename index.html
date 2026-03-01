@@ -1473,7 +1473,7 @@
                     </div>
                     {mode === 'kbzhu' && (
                       <div className="shrink-0 flex items-center gap-1">
-                        <div className="flex gap-0.5 items-center bg-slate-100/30 rounded px-1 border border-slate-200/50" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex pt-0.5 gap-0.5 items-center bg-slate-100/30 rounded px-1 border border-slate-200/50" onClick={(e) => e.stopPropagation()}>
                            {['val1', 'val2', 'val3', 'val4'].map((f, i) => {
                              const isMacro = i > 0;
                              return (
@@ -1484,9 +1484,9 @@
                              );
                            })}
                         </div>
-                        <div className="shrink-0 flex items-center bg-slate-100/30 rounded px-1 border border-slate-200/50" onClick={(e) => e.stopPropagation()}>
+                        <div className="shrink-0 pt-0.5 flex flex-col items-center bg-slate-100/30 rounded px-1 border border-slate-200/50" onClick={(e) => e.stopPropagation()}>
+                          <span className="text-[6px] font-black text-slate-400 leading-none uppercase">Вес</span>
                           <input type="text" inputMode="decimal" maxLength={4} value={record.weight || ''} onChange={(e) => handleWeightInput(e.target.value)} placeholder={t.weightPlaceholder} style={{ fontSize: `${(uiSettings.fontSize || 12)}px` }} className="w-9 text-center bg-transparent border-none outline-none focus:ring-0 p-0 m-0 font-black placeholder:text-slate-300 tabular-nums text-slate-900" />
-                          <span className="text-[10px] font-black text-slate-400 ml-0.5">{t.gr}</span>
                         </div>
                       </div>
                     )}
@@ -1556,7 +1556,7 @@
           if (saved) return JSON.parse(saved);
           return {
             gym: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, backgroundColor: '#f8fafc', highlightColor: '#f1f5f9', completedColor: '#ecfdf5', weightColor: '#475569', fontSize: 13, lineCount: 2, toastDuration: 3, maxWorkoutTime: 4, enableToasts: true },
-            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, backgroundColor: '#fff1f2', highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
+            shop: { itemHeight: 40, itemWidth: 95, itemSpacing: 8, backgroundColor: '#f0f0ff', highlightColor: '#f1f5f9', completedColor: '#fef2f2', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
             pressure: { itemHeight: 44, itemWidth: 100, itemSpacing: 10, backgroundColor: '#f0f9ff', highlightColor: '#f1f5f9', completedColor: '#f8fafc', fontSize: 13, lineCount: 1, toastDuration: 3, enableToasts: true },
             cook: { itemHeight: 48, itemWidth: 100, itemSpacing: 12, backgroundColor: '#fffbeb', highlightColor: '#fef3c7', completedColor: '#fffbeb', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true },
             kbzhu: { itemHeight: 48, itemWidth: 100, itemSpacing: 10, backgroundColor: '#f0fdf4', highlightColor: '#dcfce7', completedColor: '#f0fdf4', fontSize: 14, lineCount: 1, toastDuration: 3, enableToasts: true }
@@ -1648,7 +1648,29 @@
         const importJSON = (ev) => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async (e) => { try { const d = JSON.parse(e.target.result); if (d.records) setRecords(d.records); if (d.weights) setWeights(d.weights); if (d.uiSettings) setUiSettings(p => ({ ...p, ...d.uiSettings })); if (d.mode) setMode(d.mode); if (d.sessions) setSessions(d.sessions); if (d.shopListRegistry) setShopListRegistry(d.shopListRegistry.map(it => typeof it === 'string' ? { name: it, enabled: false } : it)); if (d.exerciseRegistry) setExerciseRegistry(d.exerciseRegistry); if (d.shopRegistry) setShopRegistry(d.shopRegistry); if (d.cookRegistry) setCookRegistry(d.cookRegistry); if (d.kbzhuRegistry) setKbzhuRegistry(d.kbzhuRegistry.map(it => typeof it === 'string' ? { name: it, k: '0', b: '0', j: '0', u: '0' } : it)); if (d.records) await saveToDB(d.records); if (d.weights) for (const [dk, w] of Object.entries(d.weights)) await saveWeightToDB(dk, w); if (d.sessions) for (const [dk, s] of Object.entries(d.sessions)) await saveSessionToDB(dk, s); showToast(t.importToast, true); ev.target.value = ''; } catch (err) { showToast(t.errorToast, true); } }; r.readAsText(f); };
         const triggerImport = () => importFileRef.current.click();
         const addNewRecord = () => { let ln = shopListName; if (mode === 'shop') { if (!ln) { ln = t.defaultListName; setShopListName(ln); } if (ln && !allShopListsNames.includes(ln)) setShopListRegistry(p => [...p, { name: ln, enabled: false }]); } const nr = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: '', val1: '', val2: '', val3: '', val4: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: (mode === 'cook' || mode === 'kbzhu') ? null : viewDateKey, mode, listName: mode === 'shop' ? ln : null, sortOrder: records.length }; setRecords(p => [...p, nr]); };
-        const calculateKbzhuTotals = () => { if (mode !== 'kbzhu') return; let tK=0, tB=0, tJ=0, tU=0, tW=0; currentRecords.filter(r => r.isCompleted).forEach(r => { const w = parseFloat(r.weight)||0; tK += ((parseFloat(r.val1)||0)*w)/100; tB += ((parseFloat(r.val2)||0)*w)/100; tJ += ((parseFloat(r.val3)||0)*w)/100; tU += ((parseFloat(r.val4)||0)*w)/100; tW += w; }); if (tW > 0) setKbzhuResults({ k: ((tK/tW)*100).toFixed(1), b: ((tB/tW)*100).toFixed(1), j: ((tJ/tW)*100).toFixed(1), u: ((tU/tW)*100).toFixed(1) }); else { setKbzhuResults(null); showToast(t.noData, true); } };
+        const calculateKbzhuTotals = () => {
+          if (mode !== 'kbzhu') return;
+          let tK=0, tB=0, tJ=0, tU=0, tW=0;
+          currentRecords.filter(r => r.isCompleted).
+          forEach(r => {
+            const w = parseFloat(r.weight)||0;
+            tK += ((parseFloat(r.val1)||0)*w)/100;
+            tB += ((parseFloat(r.val2)||0)*w)/100;
+            tJ += ((parseFloat(r.val3)||0)*w)/100;
+            tU += ((parseFloat(r.val4)||0)*w)/100;
+            tW += w;
+          });
+          if (tW > 0) setKbzhuResults({
+            k: ((tK/tW)*100).toFixed(1),
+            b: ((tB/tW)*100).toFixed(1),
+            j: ((tJ/tW)*100).toFixed(1),
+            u: ((tU/tW)*100).toFixed(1),
+            w: tW
+          }); else {
+            setKbzhuResults(null);
+            showToast(t.noData, true);
+          }
+        };
         const deleteAllForCurrentContext = () => { if (isClearConfirming) { if (mode === 'gym') setRecords(p => p.filter(r => !(r.dateKey === viewDateKey && (r.mode === 'gym' || !r.mode)))); else if (mode === 'shop') setRecords(p => p.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName)))); else if (mode === 'pressure') setRecords(p => p.filter(r => !(r.dateKey === viewDateKey && r.mode === 'pressure'))); else if (mode === 'cook') setRecords(p => p.filter(r => r.mode !== 'cook')); else if (mode === 'kbzhu') setRecords(p => p.filter(r => r.mode !== 'kbzhu')); setIsClearConfirming(false); showToast(t.clearedToast, true); } else { setIsClearConfirming(true); if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000); } };
         const handleDeleteCurrentShopList = () => { if (!shopListName) return; if (isListDeleteConfirming) { const lt = shopListName; setRecords(p => p.filter(r => !(r.mode === 'shop' && r.listName === lt))); setShopListRegistry(p => p.filter(l => l.name !== lt)); const la = allShopListsNames.filter(l => l !== lt); setShopListName(la.length > 0 ? la[0] : ""); setIsListDeleteConfirming(false); showToast(t.listDeletedToast, true); } else { setIsListDeleteConfirming(true); if (listDeleteConfirmTimeout.current) clearTimeout(listDeleteConfirmTimeout.current); listDeleteConfirmTimeout.current = setTimeout(() => setIsListDeleteConfirming(false), 3000); } };
         const onRenameShopList = (on, nn) => { if (!nn.trim() || on === nn) return; setShopListRegistry(p => p.map(l => l.name === on ? { ...l, name: nn.trim() } : l)); setRecords(p => p.map(r => (r.mode === 'shop' && r.listName === on) ? { ...r, listName: nn.trim() } : r)); if (shopListName === on) setShopListName(nn.trim()); };
@@ -1731,8 +1753,21 @@
                       </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-between px-3 gap-2 overflow-hidden">
-                      <button onClick={calculateKbzhuTotals} className="px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-all shadow-sm shrink-0">{t.calculate}</button>
-                      {kbzhuResults && (<div className="flex-1 text-[9px] font-black text-slate-700 whitespace-nowrap overflow-hidden text-ellipsis text-right leading-tight">К: {kbzhuResults.k}, Б: {kbzhuResults.b}, Ж: {kbzhuResults.j}, У: {kbzhuResults.u}</div>)}
+                      <button
+                        onClick={calculateKbzhuTotals}
+                        className="px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-all shadow-sm shrink-0"
+                      >
+                        {t.calculate}
+                      </button>
+                      {kbzhuResults && (
+                        <div className="flex gap-2 text-xs text-slate-700 text-right">
+                          <span className="text-grey-400">Б: </span><span className="font-black">{kbzhuResults.b};</span>
+                          <span className="text-grey-400">Ж: </span><span className="font-black">{kbzhuResults.j};</span>
+                          <span className="text-grey-400">У: </span><span className="font-black">{kbzhuResults.u};</span>
+                          <span className="text-grey-400">К: </span><span className="font-black text-red-600">{kbzhuResults.k};</span>
+                          <span className="text-grey-400">Вес: </span><span className="font-black text-red-600">{kbzhuResults.w}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
