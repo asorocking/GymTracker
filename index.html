@@ -334,19 +334,6 @@
     </script>
 
     <script type="text/babel" data-presets="react,typescript">
-      class ErrorBoundary extends React.Component {
-        constructor(props) { super(props); this.state = { hasError: false, error: null }; }
-        static getDerivedStateFromError(error) { return { hasError: true, error }; }
-        render() {
-          if (this.state.hasError) {
-            return <div style={{padding: '20px', color: 'red', background: 'white', zIndex: 9999, position: 'fixed'}}>
-              <h1>Упс! Ошибка:</h1>
-              <pre>{this.state.error?.message}</pre>
-            </div>;
-          }
-          return this.props.children;
-        }
-      }
       const { useState, useEffect, useRef, useMemo } = React;
 
       const i18n = {
@@ -451,7 +438,7 @@
           dateLabel: "Date",
           commentPlaceholder: "Комментарий...",
           calendarTitle: "Календарь тренировок",
-          daysShort: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+          daysShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
           months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
         },
         en: {
@@ -555,7 +542,7 @@
           dateLabel: "Date",
           commentPlaceholder: "Comment...",
           calendarTitle: "Workout Calendar",
-          daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+          daysShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
           months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         }
       };
@@ -1793,11 +1780,7 @@
       };
 
       const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-      );
+      root.render(<App />);
     </script>
   </body>
 </html>
