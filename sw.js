@@ -7,7 +7,7 @@ const ASSETS_TO_CACHE = [
   'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
   'https://cdn.tailwindcss.com',
   '/GymTracker/icons/icon-192.png',
-  '/GymTracker/icons/icon-512.png'
+  '/GymTracker/icons/icon-512.png',
   'https://unpkg.com/@babel/standalone@7.23.10/babel.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
