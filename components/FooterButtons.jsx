@@ -87,6 +87,115 @@ const FooterButtons = (props) => {
         } else props.showToast(props.t.noPastData, true);
     };
 
+    const getDynamicButtonText = () => {
+        // 1. Получаем индекс (0-6)
+        const dayIndex = new Date(props.viewDateKey.replace(/-/g, '/')).getDay();
+
+        // 2. Берем нужное слово из словаря переводов
+        // props.t.pastDays[dayIndex] вернет "прошлую среду" или "last Wednesday"
+        const dayText = props.t.pastDays[dayIndex];
+
+        return `${props.t.repeatLabel} ${dayText}`;
+    };
+
+    const getShortDayName = (dateStr) => {
+        if (!dateStr) return '';
+        // Превращаем строку YYYY-MM-DD в локальную дату
+        const date = new Date(dateStr.replace(/-/g, '/'));
+        // 'ru-RU' — язык, 'weekday: short' — короткое название (пн, вт, ср...)
+        return date.toLocaleDateString('ru-RU', { weekday: 'long' });
+    };
+
+    const test = () => {
+        // 1. Вспомогательная функция для получения дня недели (0-6) без ошибок часового пояса
+        const getDayIndex = (dateStr) => {
+            if (!dateStr) return null;
+            // Заменяем "-" на "/", чтобы JS интерпретировал дату как локальную, а не UTC
+            return new Date(dateStr.replace(/-/g, '/')).getDay();
+        };
+
+        if (props.mode === 'gym') {
+            // 2. Берем индекс дня недели текущей даты (например, 4 для четверга)
+            const currentDayOfWeek = getDayIndex(props.viewDateKey);
+            const dayName = getShortDayName(props.viewDateKey);
+
+            // 3. Получаем список уникальных дат из истории тренировок
+            const pastDates = [...new Set(props.records
+                .filter(r => r.mode === 'gym' || !r.mode)
+                .map(r => r.dateKey))]
+                // Оставляем только те, что раньше СЕГОДНЯ и имеют ТОТ ЖЕ день недели
+                .filter(dk => dk < props.viewDateKey && getDayIndex(dk) === currentDayOfWeek)
+                .sort(); // Сортировка YYYY-MM-DD работает "из коробки"
+
+            // 4. Берем самую свежую дату из найденных (предыдущий такой же день недели)
+            const lastDate = pastDates.pop();
+
+            if (!lastDate) {
+                props.showToast(`${props.t.noPastData} (день недели: ${dayName})`, true);
+                return;
+            }
+
+            // 5. Находим записи за ту дату и готовим их к копированию
+            const toCopy = props.records.filter(r => r.dateKey === lastDate && (r.mode === 'gym' || !r.mode));
+
+            const copiedList = toCopy.map((record, i) => ({
+                ...record,
+                id: String(Date.now() + Math.random() + i), // Новый уникальный ID
+                dateKey: props.viewDateKey,               // Устанавливаем текущую дату
+                val1: '',                                 // Обнуляем подходы
+                val2: '',
+                val3: '',
+                val4: '',
+                isNew: false,
+                isCompleted: false,                       // Тренировка еще не выполнена
+                createdAt: Date.now(),
+                mode: 'gym',
+                sortOrder: props.records.length + i       // Ставим в конец текущего списка
+            }));
+
+            // 6. Обновляем состояние записей
+            props.setRecords(prev => [...prev, ...copiedList]);
+            const pastDayName = getShortDayName(lastDate);
+            props.showToast(`${props.t.copySuccess} за ${lastDate} (${pastDayName}) 📋`, true);
+
+        } else {
+            props.showToast(props.t.noPastData, true);
+        }
+    };
+
+    const copyFromLastSameWeekDayWorkout = () => {
+        if (props.mode === 'gym') {
+            const filteredGymRecords = props.records.filter(record => record.mode === 'gym' || !record.mode);
+            const pastDates = [...new Set(filteredGymRecords.map(record => record.dateKey))]
+                .filter(dateKey => dateKey < props.viewDateKey)
+                .sort();
+            const lastDate = pastDates.pop();
+            if (!lastDate) { props.showToast(props.t.noPastData, true);
+                return;
+            }
+            const toCopy = filteredGymRecords.filter(record => record.dateKey === lastDate);
+            const copiedList = toCopy.map((record, i) => ({
+                ...record, // Взять существующую запись и заменить в ней значения, указанные ниже
+                id: String(Date.now() + Math.random() + i),
+                dateKey: props.viewDateKey,
+                weight: record.weight,
+                notes: record.notes,
+                val1: '',
+                val2: '',
+                val3: '',
+                isNew: false,
+                isHighlighted: record.isHighlighted,
+                isCompleted: false,
+                createdAt: Date.now(),
+                mode: 'gym',
+                sortOrder: props.records.length + i
+            }));
+            // Возьми существующие записи из existingRecords, разверни их в новый массив и добавь к ним записи из copiedList
+            props.setRecords(existingRecords => [...existingRecords, ...copiedList]);
+            props.showToast(`${props.t.copySuccess} ${lastDate} 📋`, true);
+        } else props.showToast(props.t.noPastData, true);
+    };
+
     const dayOfWeek = props.viewDate.toLocaleDateString(props.language === 'ru' ? 'ru-RU' : 'en-US', {
         weekday: 'short'
     });
@@ -118,13 +227,13 @@ const FooterButtons = (props) => {
                 </button>)
             }
             {props.currentRecords.length === 0 && props.mode === 'gym' && (
-                <button onClick={copyFromLastWorkout}
+                <button onClick={test}
                         className="action-button w-full h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 shadow-lg mb-0.5">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
                     <span className="text-sm font-bold">
-                        {props.t.repeatLastDayOfWeek + dayOfWeek}
+                        {getDynamicButtonText()}
                     </span>
                 </button>)
             }
