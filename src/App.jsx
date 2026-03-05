@@ -6,14 +6,12 @@ import ContentRecords from "@/components/ContentRecords.jsx";
 import FooterButtons from "@/components/FooterButtons.jsx";
 
 function App() {
-    useEffect(() => {
-        const rawData = localStorage.getItem('gt_shop_list_name'); // например 'gym-data'
-        if (rawData) {
-            alert("Данные в памяти есть! Длина строки: " + rawData.length);
-        } else {
-            alert("LocalStorage пуст");
-        }
-    }, []);
+    const DB_NAME = 'TrackerDB';
+    const STORE_RECORDS = 'records';
+    const STORE_WEIGHTS = 'weights';
+    const STORE_SESSIONS = 'sessions';
+    const DB_VERSION = 5;
+
     const i18n = {
         ru: {
             appName: "GymTracker",
@@ -263,8 +261,14 @@ function App() {
             request.onerror = (e) => reject(e.target.error);
         });
     };
-    const saveToDB = async (records) => {
+    const saveToDB = async (records, forceEmpty = false) => {
         if (!records) return;
+
+        // ПРОВЕРКА: Если массив пуст и мы НЕ заставляем базу тереться специально — выходим.
+        if (records.length === 0 && !forceEmpty) {
+            return;
+        }
+
         const db = await initDB();
         const tx = db.transaction(STORE_RECORDS, 'readwrite');
         const store = tx.objectStore(STORE_RECORDS);
@@ -282,7 +286,6 @@ function App() {
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error);
             };
-            clearReq.onerror = () => reject(clearReq.error);
         });
     };
     const loadFromDB = async () => {
@@ -1123,18 +1126,41 @@ return (
     useEffect(() => { localStorage.setItem('gt_cook_registry', JSON.stringify(cookRegistry)); }, [cookRegistry]);
     useEffect(() => { localStorage.setItem('gt_kbzhu_registry', JSON.stringify(kbzhuRegistry)); }, [kbzhuRegistry]);
 
+    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
     useEffect(() => {
         const init = async () => {
             try {
-                const [savedRecords, savedWeights, savedSessions] = await Promise.all([loadFromDB(), loadWeightsFromDB(), loadSessionsFromDB()]);
-                if (savedRecords) { const updated = savedRecords.map(r => r.dateKey ? r : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) }); setRecords(updated); }
+                const [savedRecords, savedWeights, savedSessions] = await Promise.all([
+                    loadFromDB(), loadWeightsFromDB(), loadSessionsFromDB()
+                ]);
+                if (savedRecords && savedRecords.length > 0) {
+                    const updated = savedRecords.map(r => r.dateKey ? r
+                        : { ...r, dateKey: getDateKey(r.createdAt || Date.now()) });
+                    setRecords(updated);
+                }
+
                 if (savedWeights) setWeights(savedWeights);
                 if (savedSessions) setSessions(savedSessions);
+
+                // Сначала говорим, что данные в стейте, потом разрешаем работу
                 setIsLoaded(true);
-            } catch (err) { setIsLoaded(true); }
+                setTimeout(() => setIsInitialLoadDone(true), 100);
+            } catch (err) {
+                console.error("Ошибка загрузки:", err);
+                setIsLoaded(true);
+                setIsInitialLoadDone(true);
+
+            }
         };
         init();
     }, []);
+
+    useEffect(() => {
+        if (isInitialLoadDone && isLoaded && !isDraggingInProgress) {
+            // Мы вызываем сохранение, но внутри saveToDB теперь есть защита
+            saveToDB(records).catch(console.error);
+        }
+    }, [records, isLoaded, isDraggingInProgress, isInitialLoadDone]);
 
     const currentWeight = weights[viewDateKey] || '';
     const displayDate = viewDate.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', {
@@ -1145,7 +1171,7 @@ return (
     });
 
     useEffect(() => { if (mode === 'gym') { const s = sessions[viewDateKey]; if (s && s.start && !s.end) { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); } } }, [sessions, viewDateKey, mode]);
-    useEffect(() => { if (isLoaded && !isDraggingInProgress) { saveToDB(records).catch(console.error); } }, [records, isLoaded, isDraggingInProgress]);
+
 
     useEffect(() => {
         // Регистрацию SW лучше делать здесь, при загрузке компонента
@@ -1163,11 +1189,6 @@ return (
     const sP = !!sessions[viewDateKey]?.start && !!sessions[viewDateKey]?.end;
     const cAB = uiSettings[mode]?.backgroundColor || '#f8fafc';
 
-    const DB_NAME = 'TrackerDB';
-    const STORE_RECORDS = 'records';
-    const STORE_WEIGHTS = 'weights';
-    const STORE_SESSIONS = 'sessions';
-    const DB_VERSION = 4;
 
     const changeMode = (newMode) => {
         setMode(newMode);
@@ -1197,7 +1218,7 @@ return (
                     <HeaderButtons mode={mode} t={t} isListDropdownOpen={isListDropdownOpen} currentWeight={currentWeight} setIsStatsOpen={setIsStatsOpen}
                       setIsSettingsOpen={setIsSettingsOpen} importFileRef={importFileRef} triggerImport={triggerImport} exportJSON={exportJSON}
                       handleManualSave={handleManualSave} handleWeightChange={handleWeightChange} setIsListDropdownOpen={setIsListDropdownOpen}
-                      setShopListName={setShopListName} allShopListsNames={allShopListsNames} shopListName={shopListName}
+                      setShopListName={setShopListName} allShopListsNames={allShopListsNames} shopListName={shopListName} importJSON={importJSON}
                     />
                     <AdditionalHeader mode={mode} currentSessionDuration={currentSessionDuration} t={t} sP={sP} sSA={sSA} displayDate={displayDate}
                       allShopListsNames={allShopListsNames} shopListName={shopListName} language={language} viewDate={viewDate}
