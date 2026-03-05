@@ -1,6 +1,10 @@
 import React from 'react';
 
 const AdditionalHeader = (props) => {
+    const dateFormat = {day: '2-digit', month: '2-digit', year: '2-digit', weekday: 'short'};
+    const currentDate = new Date().toLocaleDateString(props.language === 'ru' ? 'ru-RU' : 'en-US', dateFormat);
+    const selectedDate = props.viewDate.toLocaleDateString(props.language === 'ru' ? 'ru-RU' : 'en-US', dateFormat);
+
     return (
         <div className="px-4 pb-1">
             <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm min-h-[40px]">
@@ -12,7 +16,25 @@ const AdditionalHeader = (props) => {
                         ) : (
                             <div className="flex-1 flex justify-center"><span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{props.t.pressureName}</span></div>
                         )}
-                        <div onClick={() => props.setIsCalendarOpen(true)} className="flex flex-col items-center justify-center cursor-pointer px-1 shrink-0 min-w-[80px] hover:bg-slate-100 rounded-lg active:scale-95 transition-all"><span className="text-[10px] font-black text-slate-900 tabular-nums leading-none whitespace-nowrap mb-0.5">{props.displayDate}</span>{props.currentSessionDuration && props.mode === 'gym' && (<div className="flex flex-col items-center gap-0"><span className="text-[6px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">{props.t.workoutTime}</span><span className={`text-[10px] font-black tabular-nums leading-none ${props.sP ? 'text-slate-400' : 'text-slate-600'}`}>{props.currentSessionDuration}</span></div>)}</div>
+                        <div onClick={() => props.setIsCalendarOpen(true)}
+                             className="flex flex-col items-center justify-center cursor-pointer px-1 shrink-0 min-w-[80px] hover:bg-slate-100
+                                rounded-lg active:scale-95 transition-all"
+                        >
+                            <span className={`text-[10px] font-black text-slate-900 tabular-nums leading-none whitespace-nowrap mb-0.5
+                                              ${currentDate === selectedDate ? 'text-orange-500' : props.sP ? 'text-slate-400' : 'text-slate-600'}`}>
+                                {props.displayDate}
+                            </span>
+                            {props.currentSessionDuration && props.mode === 'gym' && (
+                                <div className="flex flex-col items-center gap-0">
+                                    <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">
+                                        {props.t.workoutTime}
+                                    </span>
+                                    <span className={`text-[10px] font-black tabular-nums leading-none ${props.sP ? 'text-slate-400' : 'text-slate-600'}`}>
+                                        {props.currentSessionDuration}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                         {props.mode === 'gym' ? (
                             <div className="flex-1 flex justify-center"><button onClick={props.handleFinishSession} className={`px-3 py-1 text-[8px] font-black uppercase tracking-tighter rounded-md transition-all duration-300 ${props.sP ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-100 text-slate-600 active:bg-slate-900 active:text-white'}`}>{props.t.finish}</button></div>
                         ) : (

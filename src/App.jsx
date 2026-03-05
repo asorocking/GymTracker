@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Header from '../components/Header'
+import Header from '@/components/Header'
 import HeaderButtons from "@/components/HeaderButtons.jsx";
 import AdditionalHeader from "@/components/AdditionalHeader.jsx";
 import ContentRecords from "@/components/ContentRecords.jsx";
@@ -45,6 +45,7 @@ function App() {
             addRecipe: "Новый рецепт",
             addKbzhu: "Добавить запись",
             repeatLast: "Повторить прошлую тренировку",
+            repeatLastDayOfWeek: "Повторить прошл. ",
             noPastData: "Нет данных 🤷‍♂️",
             copySuccess: "Копия:",
             clearConfirm: "Подтвердите удаление?",
@@ -149,6 +150,7 @@ function App() {
             addRecipe: "New Recipe",
             addKbzhu: "Add Record",
             repeatLast: "Repeat last workout",
+            repeatLastDayOfWeek: "Repeat last ",
             noPastData: "No data 🤷‍♂️",
             copySuccess: "Copied:",
             clearConfirm: "Confirm clear?",
@@ -410,9 +412,9 @@ function App() {
                                             onClose();
                                         }}
                                         className={`py-2 text-sm font-bold rounded-lg cursor-pointer transition-all
-                          ${isSelected ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}
-                          ${isToday && !isSelected ? '!text-red-600 font-black' : ''}
-                        `}
+                                          ${isSelected ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}
+                                          ${isToday ? '!text-red-600 font-black' : ''}
+                                        `}
                                     >
                                         {d.day}
                                     </div>
@@ -961,7 +963,7 @@ return (
     const exportJSON = () => { const s = JSON.stringify({ records, weights, uiSettings, mode, sessions, shopListRegistry, exerciseRegistry, shopRegistry, cookRegistry, kbzhuRegistry, exportedAt: new Date().toISOString() }, null, 2); const b = new Blob([s], { type: 'application/json' }); const u = URL.createObjectURL(b); const l = document.createElement('a'); l.href = u; l.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; l.click(); URL.revokeObjectURL(u); showToast(t.exportToast, true); };
     const importJSON = (ev) => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async (e) => { try { const d = JSON.parse(e.target.result); if (d.records) setRecords(d.records); if (d.weights) setWeights(d.weights); if (d.uiSettings) setUiSettings(p => ({ ...p, ...d.uiSettings })); if (d.mode) setMode(d.mode); if (d.sessions) setSessions(d.sessions); if (d.shopListRegistry) setShopListRegistry(d.shopListRegistry.map(it => typeof it === 'string' ? { name: it, enabled: false } : it)); if (d.exerciseRegistry) setExerciseRegistry(d.exerciseRegistry); if (d.shopRegistry) setShopRegistry(d.shopRegistry); if (d.cookRegistry) setCookRegistry(d.cookRegistry); if (d.kbzhuRegistry) setKbzhuRegistry(d.kbzhuRegistry.map(it => typeof it === 'string' ? { name: it, k: '0', b: '0', j: '0', u: '0' } : it)); if (d.records) await saveToDB(d.records); if (d.weights) for (const [dk, w] of Object.entries(d.weights)) await saveWeightToDB(dk, w); if (d.sessions) for (const [dk, s] of Object.entries(d.sessions)) await saveSessionToDB(dk, s); showToast(t.importToast, true); ev.target.value = ''; } catch (err) { showToast(t.errorToast, true); } }; r.readAsText(f); };
     const triggerImport = () => importFileRef.current.click();
-    const addNewRecord = () => { let ln = shopListName; if (mode === 'shop') { if (!ln) { ln = t.defaultListName; setShopListName(ln); } if (ln && !allShopListsNames.includes(ln)) setShopListRegistry(p => [...p, { name: ln, enabled: false }]); } const nr = { id: String(Date.now() + Math.random()), description: '', weight: '', notes: '', val1: '', val2: '', val3: '', val4: '', isNew: true, isHighlighted: false, isCompleted: false, createdAt: Date.now(), dateKey: (mode === 'cook' || mode === 'kbzhu') ? null : viewDateKey, mode, listName: mode === 'shop' ? ln : null, sortOrder: records.length }; setRecords(p => [...p, nr]); };
+
     const calculateKbzhuTotals = () => {
         if (mode !== 'kbzhu') return;
         let tK=0, tB=0, tJ=0, tU=0, tW=0;
@@ -985,11 +987,10 @@ return (
             showToast(t.noData, true);
         }
     };
-    const deleteAllForCurrentContext = () => { if (isClearConfirming) { if (mode === 'gym') setRecords(p => p.filter(r => !(r.dateKey === viewDateKey && (r.mode === 'gym' || !r.mode)))); else if (mode === 'shop') setRecords(p => p.filter(r => !(r.mode === 'shop' && r.listName === (shopListName || t.defaultListName)))); else if (mode === 'pressure') setRecords(p => p.filter(r => !(r.dateKey === viewDateKey && r.mode === 'pressure'))); else if (mode === 'cook') setRecords(p => p.filter(r => r.mode !== 'cook')); else if (mode === 'kbzhu') setRecords(p => p.filter(r => r.mode !== 'kbzhu')); setIsClearConfirming(false); showToast(t.clearedToast, true); } else { setIsClearConfirming(true); if (clearConfirmTimeout.current) clearTimeout(clearConfirmTimeout.current); clearConfirmTimeout.current = setTimeout(() => setIsClearConfirming(false), 3000); } };
+
     const handleDeleteCurrentShopList = () => { if (!shopListName) return; if (isListDeleteConfirming) { const lt = shopListName; setRecords(p => p.filter(r => !(r.mode === 'shop' && r.listName === lt))); setShopListRegistry(p => p.filter(l => l.name !== lt)); const la = allShopListsNames.filter(l => l !== lt); setShopListName(la.length > 0 ? la[0] : ""); setIsListDeleteConfirming(false); showToast(t.listDeletedToast, true); } else { setIsListDeleteConfirming(true); if (listDeleteConfirmTimeout.current) clearTimeout(listDeleteConfirmTimeout.current); listDeleteConfirmTimeout.current = setTimeout(() => setIsListDeleteConfirming(false), 3000); } };
     const onRenameShopList = (on, nn) => { if (!nn.trim() || on === nn) return; setShopListRegistry(p => p.map(l => l.name === on ? { ...l, name: nn.trim() } : l)); setRecords(p => p.map(r => (r.mode === 'shop' && r.listName === on) ? { ...r, listName: nn.trim() } : r)); if (shopListName === on) setShopListName(nn.trim()); };
     const clearRegistryOfEmptyLists = () => { const u = new Set(records.filter(r => r.mode === 'shop').map(r => r.listName)); setShopListRegistry(p => p.filter(l => u.has(l.name))); showToast(t.clearedToast, true); };
-    const copyFromLastWorkout = () => { if (mode === 'gym') { const f = records.filter(r => r.mode === 'gym' || !r.mode); const pd = [...new Set(f.map(r => r.dateKey))].filter(dk => dk < viewDateKey).sort(); const ld = pd.pop(); if (!ld) { showToast(t.noPastData, true); return; } const tc = f.filter(r => r.dateKey === ld); const cl = tc.map((r, i) => ({ ...r, id: String(Date.now()+Math.random()+i), dateKey: viewDateKey, weight: r.weight, notes: r.notes, val1: '', val2: '', val3: '', isNew: false, isHighlighted: r.isHighlighted, isCompleted: false, createdAt: Date.now(), mode: 'gym', sortOrder: records.length+i })); setRecords(p => [...p, ...cl]); showToast(`${t.copySuccess} ${ld} 📋`, true); } else showToast(t.noPastData, true); };
     const updateRecord = (id, f, v) => setRecords(p => p.map(r => r.id === id ? { ...r, [f]: v } : r));
     const deleteRecord = (id) => setRecords(p => p.filter(r => r.id !== id));
     const handleStartSession = () => { const cs = sessions[viewDateKey]; let ns = Date.now(); if (!cs || !cs.start) ns = Date.now(); else if (cs.end) ns = Date.now() - (cs.end - cs.start); else return; const nS = { start: ns, end: null }; setSessions(p => ({ ...p, [viewDateKey]: nS })); saveSessionToDB(viewDateKey, nS).catch(console.error); setNow(Date.now()); };
@@ -1047,7 +1048,6 @@ return (
     const [isListDropdownOpen, setIsListDropdownOpen] = useState(false);
     const [draggedIdx, setDraggedIdx] = useState(null);
     const [isDraggingInProgress, setIsDraggingInProgress] = useState(false);
-    const [isClearConfirming, setIsClearConfirming] = useState(false);
     const [isListDeleteConfirming, setIsListDeleteConfirming] = useState(false);
     const clearConfirmTimeout = useRef(null);
     const listDeleteConfirmTimeout = useRef(null);
@@ -1174,23 +1174,25 @@ return (
                       setShopListName={setShopListName} allShopListsNames={allShopListsNames} shopListName={shopListName}
                     />
                     <AdditionalHeader mode={mode} currentSessionDuration={currentSessionDuration} t={t} sP={sP} sSA={sSA} displayDate={displayDate}
-                      allShopListsNames={allShopListsNames} shopListName={shopListName}
+                      allShopListsNames={allShopListsNames} shopListName={shopListName} language={language} viewDate={viewDate}
                       changeDate={changeDate} onStartPointerDown={onStartPointerDown} onStartPointerUp={onStartPointerUp}
                       handleFinishSession={handleFinishSession} setIsCalendarOpen={setIsCalendarOpen} changeShopList={changeShopList}
                       handleDeleteCurrentShopList={handleDeleteCurrentShopList} isListDeleteConfirming={isListDeleteConfirming}
                       cookSearchQuery={cookSearchQuery} setCookSearchQuery={setCookSearchQuery} calculateKbzhuTotals={calculateKbzhuTotals}
-                      kbzhuResults={kbzhuResults} setShopListName={setShopListName} longPressTimer={longPressTimer}
+                      kbzhuResults={kbzhuResults} setShopListName={setShopListName} longPressTimer={longPressTimer} getDateKey={getDateKey}
                     />
                 </header>
 
                 <main className="px-4 pb-12 pt-1.5 flex flex-col items-center">
                     <ContentRecords mode={mode} currentRecords={currentRecords} deleteRecord={deleteRecord} updateRecord={updateRecord}
-                        handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} draggedIdx={draggedIdx}
-                        uiSettings={uiSettings} knownExercises={knownExercises} knownShopItems={knownShopItems} knownCookItems={knownCookItems}
-                        knownKbzhuItems={knownKbzhuItems} t={t}
+                      handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} draggedIdx={draggedIdx}
+                      uiSettings={uiSettings} knownExercises={knownExercises} knownShopItems={knownShopItems} knownCookItems={knownCookItems}
+                      knownKbzhuItems={knownKbzhuItems} t={t}
                     />
-                    <FooterButtons addNewRecord={addNewRecord} mode={mode} t={t} currentRecords={currentRecords} copyFromLastWorkout={copyFromLastWorkout}
-                       deleteAllForCurrentContext={deleteAllForCurrentContext} isClearConfirming={isClearConfirming}
+                    <FooterButtons mode={mode} t={t} currentRecords={currentRecords} viewDate={viewDate} language={language}
+                      setRecords={setRecords} viewDateKey={viewDateKey} shopListName={shopListName} showToast={showToast}
+                      clearConfirmTimeout={clearConfirmTimeout} clearTimeout={clearTimeout} setShopListName={setShopListName}
+                      records={records} allShopListsNames={allShopListsNames} setShopListRegistry={setShopListRegistry}
                     />
                 </main>
             </div>
