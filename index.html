@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8fafc" />
+    
+    <!-- Favicon & Icons -->
+    <link rel="apple-touch-icon" href="/GymTracker/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/GymTracker/icons/icon-192.png">
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/GymTracker/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GymTracker" />
+    
+    <title>GymTracker Pro</title>
+    
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      #root:empty::before {
+        content: "";
+        display: block;
+        width: 24px;
+        height: 24px;
+        margin: 45vh auto 0;
+        border: 2px solid #e2e8f0;
+        border-top-color: #0f172a;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      
+      body {
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: contain;
+        background-color: #f8fafc;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      
+      .fade-in {
+        animation: fadeIn 0.2s ease-out forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .tracker-item {
+        position: relative;
+        transition: box-shadow 0.2s ease, opacity 0.2s ease, height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform, opacity;
+      }
+      
+      .tracker-item.dragging {
+        opacity: 0.1;
+        box-shadow: none;
+      }
+
+      .drag-handle {
+        cursor: grab;
+        touch-action: none;
+      }
+      .drag-handle:active {
+        cursor: grabbing;
+      }
+      
+      textarea, input[type="text"], input[type="date"], input[type="time"] {
+        appearance: none;
+        -webkit-appearance: none;
+      }
+
+      textarea {
+        resize: none !important;
+      }
+
+      .delete-btn-active {
+        color: #ef4444 !important;
+        background-color: #fef2f2;
+        border-radius: 6px;
+      }
+
+      .action-button {
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+      }
+      .action-button:active {
+        transform: scale(0.92);
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        padding: 12px 20px;
+        border-radius: 99px;
+        background: #0f172a;
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+      .toast.show {
+        opacity: 1;
+        top: 30px;
+      }
+
+      .nav-btn {
+        @apply p-1 text-slate-500 hover:text-slate-900 transition-all active:scale-125;
+      }
+
+      .modal-backdrop {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      .suggestions-list {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(226, 232, 240, 1);
+        border-radius: 14px;
+        box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 4px;
+        animation: suggestionsIn 0.2s ease-out forwards;
+      }
+
+      @keyframes suggestionsIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .suggestion-item {
+        @apply px-3 py-2 text-[12px] font-bold text-slate-600 rounded-[10px] transition-all cursor-pointer;
+        display: flex;
+        align-items: center;
+        margin-bottom: 2px;
+      }
+      
+      .suggestion-item:active {
+        @apply bg-slate-100 text-slate-900;
+      }
+
+      input[type=range] {
+        -webkit-appearance: none;
+        width: 100%;
+        background: transparent;
+      }
+      input[type=range]:focus {
+        outline: none;
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 6px;
+        cursor: pointer;
+        background: #e2e8f0;
+        border-radius: 3px;
+      }
+      input[type=range]::-webkit-slider-thumb {
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        background: #0f172a;
+        cursor: pointer;
+        -webkit-appearance: none;
+        margin-top: -6px;
+      }
+
+      .color-picker-wrapper {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 2px solid #e2e8f0;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+      .color-picker-wrapper:active {
+        transform: scale(0.9);
+      }
+      .color-picker-wrapper input[type="color"] {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        width: 64px;
+        height: 64px;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .mode-toggle {
+        cursor: pointer;
+        transition: opacity 0.2s;
+        user-select: none;
+      }
+      .mode-toggle:active {
+        opacity: 0.6;
+      }
+
+      .custom-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1rem;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #e2e8f0;
+        transition: .4s;
+        border-radius: 22px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px; width: 16px;
+        left: 3px; bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #0f172a;
+      }
+      input:checked + .slider:before {
+        transform: translateX(18px);
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+      }
+      .calendar-day-header {
+        @apply text-[10px] font-black text-slate-400 uppercase text-center py-2;
+      }
+      .calendar-day-cell {
+        @apply relative aspect-square flex items-center justify-center text-xs font-bold rounded-xl transition-all active:scale-90 cursor-pointer;
+      }
+      .calendar-day-trained::after {
+        content: '';
+        @apply absolute bottom-1.5 w-1 h-1 bg-emerald-500 rounded-full;
+      }
+      .calendar-day-scheduled {
+        @apply border border-dashed border-slate-200;
+      }
+      .calendar-day-selected {
+        @apply bg-slate-900 text-white shadow-lg z-10;
+      }
+      .calendar-day-today {
+        @apply border-2 border-slate-900 text-slate-900;
+      }
+      .calendar-day-outside {
+        @apply opacity-20;
+      }
+
+      .expanded-content {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-height: 0;
+        opacity: 0;
+      }
+      .expanded-content.show {
+        max-height: 500px;
+        opacity: 1;
+        padding-top: 8px;
+        padding-bottom: 8px;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      
+      .strike-through {
+        text-decoration: line-through;
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-MNly5p3j.js"></script>
+  </head>
+  <body class="antialiased text-slate-900">
+    <div id="root">
+
+    </div>
+
+
+  </body>
+</html>
