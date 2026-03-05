@@ -6,6 +6,14 @@ import ContentRecords from "@/components/ContentRecords.jsx";
 import FooterButtons from "@/components/FooterButtons.jsx";
 
 function App() {
+    useEffect(() => {
+        const rawData = localStorage.getItem('gt_lang'); // например 'gym-data'
+        if (rawData) {
+            alert("Данные в памяти есть! Длина строки: " + rawData.length);
+        } else {
+            alert("LocalStorage пуст");
+        }
+    }, []);
     const i18n = {
         ru: {
             appName: "GymTracker",
