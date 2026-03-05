@@ -7,7 +7,7 @@ import FooterButtons from "@/components/FooterButtons.jsx";
 
 function App() {
     useEffect(() => {
-        const rawData = localStorage.getItem('gt_lang'); // например 'gym-data'
+        const rawData = localStorage.getItem('gt_shop_list_name'); // например 'gym-data'
         if (rawData) {
             alert("Данные в памяти есть! Длина строки: " + rawData.length);
         } else {
