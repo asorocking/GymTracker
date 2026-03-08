@@ -192,27 +192,31 @@
 
       .color-picker-wrapper {
         position: relative;
-        width: 44px;
+        width: 160px;
         height: 44px;
-        border-radius: 50%;
-        border: 2px solid #e2e8f0;
+        /*border-radius: 2px;*/
+        border: 1px solid #e2e8f0;
         overflow: hidden;
         cursor: pointer;
         transition: transform 0.2s;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       }
+      .react-colorful {
+        z-index: 0;
+      }
       .color-picker-wrapper:active {
         transform: scale(0.9);
       }
       .color-picker-wrapper input[type="color"] {
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        width: 64px;
-        height: 64px;
-        border: none;
-        padding: 0;
-        cursor: pointer;
+        display: none;
+        /*position: absolute;*/
+        /*top: -10px;*/
+        /*left: -10px;*/
+        /*width: 64px;*/
+        /*height: 64px;*/
+        /*border: none;*/
+        /*padding: 0;*/
+        /*cursor: pointer;*/
       }
 
       .mode-toggle {

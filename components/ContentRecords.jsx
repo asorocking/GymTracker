@@ -155,12 +155,31 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                             {mode === 'kbzhu' && (
                                 <div className="shrink-0 flex items-center gap-1">
                                     <div className="flex pt-0.5 gap-0.5 items-center bg-slate-100/30 rounded px-1 border border-slate-200/50" onClick={(e) => e.stopPropagation()}>
-                                        {['val1', 'val2', 'val3', 'val4'].map((f, i) => {
+                                        {['val2', 'val3', 'val4', 'val1'].map((f, i) => {
                                             const isMacro = i > 0;
                                             return (
                                                 <div key={f} className="flex flex-col items-center">
-                                                    <span className="text-[6px] font-black text-slate-400 leading-none uppercase">{['к','б','ж','у'][i]}</span>
-                                                    <input type="text" inputMode={isMacro ? "decimal" : "numeric"} maxLength={isMacro ? 5 : 4} value={record[f] || ''} onChange={(e) => { let val = e.target.value; if (isMacro) { val = val.replace(',', '.').replace(/[^0-9.]/g, ''); const parts = val.split('.'); if (parts.length > 2) val = `${parts[0]}.${parts.slice(1).join('')}`; onUpdate(record.id, f, val.slice(0, 5)); } else { onUpdate(record.id, f, val.replace(/\D/g, '').slice(0, 4)); } }} className={`${isMacro ? 'w-7' : 'w-6'} h-5 text-center bg-transparent border-none outline-none p-0 text-[10px] font-black text-slate-900 focus:ring-0`} placeholder="0" />
+                                                    <span className="text-[6px] font-black text-slate-400 leading-none uppercase">
+                                                        {['б','ж','у','к'][i]}
+                                                    </span>
+                                                    <input type="text" inputMode={isMacro ? "decimal" : "numeric"}
+                                                           maxLength={isMacro ? 5 : 4} value={record[f] || ''}
+                                                           onChange={(e) => {
+                                                               let val = e.target.value;
+                                                               if (isMacro) {
+                                                                   val = val.replace(',', '.').replace(/[^0-9.]/g, '');
+                                                                   const parts = val.split('.');
+                                                                   if (parts.length > 2)
+                                                                       val = `${parts[0]}.${parts.slice(1).join('')}`;
+                                                                   onUpdate(record.id, f, val.slice(0, 5));
+                                                               } else {
+                                                                   onUpdate(record.id, f, val.replace(/\D/g, '').slice(0, 4));
+                                                               } }
+                                                           }
+                                                           className={`${isMacro ? 'w-7' : 'w-6'} h-5 text-center bg-transparent border-none outline-none p-0 text-[10px] font-black 
+                                                               text-slate-900 focus:ring-0`}
+                                                           placeholder="0"
+                                                    />
                                                 </div>
                                             );
                                         })}

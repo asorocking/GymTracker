@@ -123,49 +123,40 @@ const SettingsModal = ({
                                         <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1"><span>{t.itemSpacing}</span><span>{currentUISettings.itemSpacing}px</span></div>
                                         <input type="range" min="0" max="32" step="2" value={currentUISettings.itemSpacing} onChange={(e) => updateUI('itemSpacing', parseInt(e.target.value))} />
                                     </div>
-
-                                    <div className="grid grid-cols-2 gap-y-6 gap-x-4 pt-4 border-t border-slate-50">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="flex flex-col items-center gap-1">
-                                                <div className="color-picker-wrapper rounded-sm" style={{ backgroundColor: currentUISettings.backgroundColor || '#f8fafc' }}>
-                                                    <input type="color" value={currentUISettings.backgroundColor || '#f8fafc'} />
-                                                </div>
-                                            </label>
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
-                                                {t.bgColor}
-                                            </label>
-                                            <div className="flex justify-center">
-                                                <HexColorPicker
-                                                    color={currentUISettings.backgroundColor || '#f8fafc'}
-                                                    onChange={(newColor) => updateUI('backgroundColor', newColor)}
-                                                />
-                                            </div>
-                                        </div>
-
-
-                                        <label className="flex flex-col items-center gap-2 cursor-pointer">
-                                            <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.completedColor }}>
-                                                <input type="color" value={currentUISettings.completedColor} onChange={(e) => updateUI('completedColor', e.target.value)} />
-                                            </div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.colorCompleted}</span>
-                                        </label>
-
-                                        {(activeMode === 'gym' || activeMode === 'cook' || activeMode === 'kbzhu') && (
-                                            <label className="flex flex-col items-center gap-2 cursor-pointer">
-                                                <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.highlightColor }}>
-                                                    <input type="color" value={currentUISettings.highlightColor} onChange={(e) => updateUI('highlightColor', e.target.value)} />
-                                                </div>
-                                                <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.colorHighlight}</span>
-                                            </label>
+                                    <div className="grid w-full justify-items-stretch grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                                        <ColorSetting
+                                            label={t.bgColor}
+                                            color={currentUISettings.backgroundColor}
+                                            onChange={(newColor) => updateUI('backgroundColor', newColor)}
+                                            t={t}
+                                            align="left"
+                                        />
+                                        {(activeMode === 'gym' || activeMode === 'shop') && (
+                                            <ColorSetting
+                                                label={t.colorCompleted}
+                                                color={currentUISettings.completedColor}
+                                                onChange={(newColor) => updateUI('completedColor', newColor)}
+                                                t={t}
+                                                align="right"
+                                            />
                                         )}
-
+                                        {(activeMode === 'gym' || activeMode === 'cook' || activeMode === 'kbzhu') && (
+                                            <ColorSetting
+                                                label={t.colorHighlight}
+                                                color={currentUISettings.colorHighlight}
+                                                onChange={(newColor) => updateUI('colorHighlight', newColor)}
+                                                t={t}
+                                                align="left"
+                                            />
+                                        )}
                                         {activeMode === 'gym' && (
-                                            <label className="flex flex-col items-center gap-2 cursor-pointer">
-                                                <div className="color-picker-wrapper" style={{ backgroundColor: currentUISettings.weightColor }}>
-                                                    <input type="color" value={currentUISettings.weightColor} onChange={(e) => updateUI('weightColor', e.target.value)} />
-                                                </div>
-                                                <span className="text-[10px] font-black text-slate-500 uppercase text-center">{t.weightColor}</span>
-                                            </label>
+                                            <ColorSetting
+                                                label={t.weightColor}
+                                                color={currentUISettings.weightColor}
+                                                onChange={(newColor) => updateUI('weightColor', newColor)}
+                                                t={t}
+                                                align="right"
+                                            />
                                         )}
                                     </div>
                                 </div>
@@ -196,4 +187,55 @@ const SettingsModal = ({
     );
 };
 
+const ColorSetting = ({ label, color, onChange, t, align = 'center' }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    // Динамические классы для позиционирования
+    const positionClasses = {
+        left: "left-0",
+        right: "right-0",
+        center: "left-1/2 -translate-x-1/2"
+    };
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">
+                {label}
+            </span>
+            <div className="relative">
+                {/* Кнопка-превью */}
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-20 h-10 rounded-sm border-4 border-white shadow-md active:scale-95 transition-transform"
+                    style={{ backgroundColor: color || '#f8fafc' }}
+                />
+
+                {/* Всплывающий пикер */}
+                {isOpen && (
+                    <>
+                        {/* Невидимая подложка для закрытия при клике мимо */}
+                        <div
+                            className="fixed inset-0 z-[1200]"
+                            onClick={() => setIsOpen(false)}
+                        />
+                        <div className={`w-[300px] absolute bottom-12 left-1/2 -translate-x-1/2 z-[1300] p-3 bg-white rounded-sm shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-150
+                                ${positionClasses[align]}`}
+                        >
+                            <HexColorPicker color={color} onChange={onChange} />
+                            <div className="w-full mt-3 flex flex-col gap-2">
+                                <div className="w-full text-[10px] font-mono font-bold text-slate-400 text-center uppercase">
+                                    {color}
+                                </div>
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="w-full py-2 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase"
+                                >
+                                    {t.close || 'OK'}
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
 export default SettingsModal;
