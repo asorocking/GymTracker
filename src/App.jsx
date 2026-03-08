@@ -813,7 +813,19 @@ function App() {
     const toggleMode = () => { const mArr = ['gym', 'shop', 'pressure', 'cook', 'kbzhu']; const ni = (mArr.indexOf(mode) + 1) % mArr.length; setMode(mArr[ni]); setCookSearchQuery(""); setKbzhuResults(null); setIsListDropdownOpen(false); };
     const handleManualSave = async () => { try { if (mode === 'shop' && shopListName.trim() && !allShopListsNames.includes(shopListName.trim())) setShopListRegistry(prev => [...prev, { name: shopListName.trim(), enabled: false }]); await Promise.all([saveToDB(records), saveWeightToDB(viewDateKey, currentWeight)]); showToast(t.savedToast, true); } catch (err) { showToast(t.errorToast, true); } };
     const handleWeightChange = (val) => { let c = val.replace(',', '.').replace(/[^0-9.]/g, ''); const p = c.split('.'); if (p.length > 2) c = `${p[0]}.${p.slice(1).join('')}`; const f = c.slice(0, 5); setWeights(prev => ({ ...prev, [viewDateKey]: f })); saveWeightToDB(viewDateKey, f).catch(console.error); };
-    const exportJSON = () => { const s = JSON.stringify({ records, weights, uiSettings, mode, sessions, shopListRegistry, exerciseRegistry, shopRegistry, cookRegistry, kbzhuRegistry, exportedAt: new Date().toISOString() }, null, 2); const b = new Blob([s], { type: 'application/json' }); const u = URL.createObjectURL(b); const l = document.createElement('a'); l.href = u; l.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`; l.click(); URL.revokeObjectURL(u); showToast(t.exportToast, true); };
+    const exportJSON = () => {
+        const s = JSON.stringify(
+            { records, weights, uiSettings, mode, sessions, shopListRegistry, exerciseRegistry, shopRegistry, cookRegistry, kbzhuRegistry, exportedAt: new Date().toISOString() },
+        null, 2);
+        const b = new Blob([s], { type: 'application/json' });
+        const u = URL.createObjectURL(b);
+        const l = document.createElement('a');
+        l.href = u;
+        l.download = `tracker-export-${new Date().toISOString().split('T')[0]}.json`;
+        l.click();
+        URL.revokeObjectURL(u);
+        showToast(t.exportToast, true);
+    };
     const importJSON = (ev) => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async (e) => { try { const d = JSON.parse(e.target.result); if (d.records) setRecords(d.records); if (d.weights) setWeights(d.weights); if (d.uiSettings) setUiSettings(p => ({ ...p, ...d.uiSettings })); if (d.mode) setMode(d.mode); if (d.sessions) setSessions(d.sessions); if (d.shopListRegistry) setShopListRegistry(d.shopListRegistry.map(it => typeof it === 'string' ? { name: it, enabled: false } : it)); if (d.exerciseRegistry) setExerciseRegistry(d.exerciseRegistry); if (d.shopRegistry) setShopRegistry(d.shopRegistry); if (d.cookRegistry) setCookRegistry(d.cookRegistry); if (d.kbzhuRegistry) setKbzhuRegistry(d.kbzhuRegistry.map(it => typeof it === 'string' ? { name: it, k: '0', b: '0', j: '0', u: '0' } : it)); if (d.records) await saveToDB(d.records); if (d.weights) for (const [dk, w] of Object.entries(d.weights)) await saveWeightToDB(dk, w); if (d.sessions) for (const [dk, s] of Object.entries(d.sessions)) await saveSessionToDB(dk, s); showToast(t.importToast, true); ev.target.value = ''; } catch (err) { showToast(t.errorToast, true); } }; r.readAsText(f); };
     const triggerImport = () => importFileRef.current.click();
 

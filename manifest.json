@@ -21,5 +21,6 @@
   "display": "standalone",
   "theme_color": "#f8fafc",
   "background_color": "#f8fafc",
+  "display_override": ["window-controls-overlay"],
   "orientation": "portrait"
 }

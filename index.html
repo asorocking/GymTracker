@@ -27,6 +27,13 @@
     <script type="module" src="/src/main.jsx"></script>
 
     <style>
+      #root, .app-container {
+        /* Резервирует место под часы и челку */
+        padding-top: env(safe-area-inset-top, 0px);
+        /* Если фон приложения совпадает с цветом фона в манифесте,
+           это создаст аккуратную полосу под часы */
+        background-color: #000000;
+      }
       #root:empty::before {
         content: "";
         display: block;
