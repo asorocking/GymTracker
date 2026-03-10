@@ -670,108 +670,195 @@ function App() {
     const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) => {
         const [activeTab, setActiveTab] = useState('body');
         const [selectedExercise, setSelectedExercise] = useState('');
+        // Стейт теперь хранит объект с массивами для веса и объема
+        const [chartData, setChartData] = useState({ labels: [], weights: [], volumes: [] });
+
         const canvasRef = useRef(null);
         const chartInstance = useRef(null);
 
+        // Установка первого упражнения по умолчанию
         useEffect(() => {
             if (!selectedExercise && knownExercises.length > 0) {
                 setSelectedExercise(knownExercises[0]);
             }
-        }, [knownExercises]);
+        }, [knownExercises, selectedExercise]);
 
         useEffect(() => {
-            if (isOpen && canvasRef.current) {
-                let labels = [];
-                let data = [];
-                let labelText = '';
+            if (!isOpen) return;
 
-                if (activeTab === 'body') {
-                    const sortedEntries = Object.entries(weights)
-                        .filter(([_, val]) => val !== '' && val !== null)
-                        .sort((a, b) => new Date(a[0]) - new Date(b[0]));
+            let labels = [];
+            let weightValues = [];
+            let volumeValues = [];
+            let labelText = '';
 
-                    if (sortedEntries.length > 0) {
-                        labels = sortedEntries.map(([date]) => {
-                            const d = new Date(date);
-                            return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-                        });
-                        data = sortedEntries.map(([_, val]) => parseFloat(val));
-                        labelText = t.weight;
-                    }
-                } else {
-                    if (selectedExercise) {
-                        const exerciseRecords = records.filter(r => r.description.trim() === selectedExercise);
-                        const groupedByDate = {};
+            const parseNum = (val) => {
+                if (!val) return 0;
+                const normalized = typeof val === 'string' ? val.replace(',', '.') : val;
+                return parseFloat(normalized) || 0;
+            };
 
-                        exerciseRecords.forEach(r => {
-                            const vals = [parseFloat(r.val1), parseFloat(r.val2), parseFloat(r.val3)].filter(v => !isNaN(v));
-                            if (vals.length > 0) {
-                                const maxVal = Math.max(...vals);
-                                if (!groupedByDate[r.dateKey] || maxVal > groupedByDate[r.dateKey]) {
-                                    groupedByDate[r.dateKey] = maxVal;
-                                }
-                            }
-                        });
+            if (activeTab === 'body') {
+                const sortedEntries = Object.entries(weights)
+                    .filter(([_, val]) => val !== '' && val !== null)
+                    .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
-                        const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a) - new Date(b));
-                        labels = sortedDates.map(date => {
-                            const d = new Date(date);
-                            return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-                        });
-                        data = sortedDates.map(date => groupedByDate[date]);
-                        labelText = selectedExercise;
-                    }
+                if (sortedEntries.length > 0) {
+                    labels = sortedEntries.map(([date]) => {
+                        const d = new Date(date);
+                        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                    });
+                    weightValues = sortedEntries.map(([_, val]) => parseNum(val));
+                    labelText = t.weight;
                 }
+            } else if (activeTab === 'exercises' && selectedExercise) {
+                const exerciseRecords = records.filter(r =>
+                    r.description &&
+                    r.description.trim().toLowerCase() === selectedExercise.trim().toLowerCase() &&
+                    !r.isStandBy // Игнорируем записи в режиме ожидания
+                );
 
-                if (chartInstance.current) { chartInstance.current.destroy(); }
+                const groupedByDate = {};
 
-                if (data.length > 0) {
+                exerciseRecords.forEach(r => {
+                    const actualDate = r.dateKey || r.date;
+                    if (!actualDate) return;
+
+                    const w = parseNum(r.weight); // Дополнительный вес (блин на поясе)
+                    const reps = parseNum(r.val1) + parseNum(r.val2) + parseNum(r.val3);
+
+                    // Ищем вес тела на эту дату в объекте weights
+                    // Если на конкретную дату записи нет, берем 80 (твой текущий вес) как дефолт
+                    const bodyWeightAtDate = parseNum(weights[actualDate]) || 80;
+
+                    let totalWeight;
+                    if (w > 0) {
+                        // Если есть доп. вес (например, +10кг), прибавляем его к весу тела
+                        totalWeight = bodyWeightAtDate + w;
+                    } else {
+                        // Если доп. веса нет (0), используем просто вес тела
+                        totalWeight = bodyWeightAtDate;
+                    }
+
+                    const vol = totalWeight * reps; // Формула: (ВесТела + ДопВес) * Повторы
+
+                    if (!groupedByDate[actualDate] || vol > groupedByDate[actualDate].vol) {
+                        groupedByDate[actualDate] = {
+                            weight: w > 0 ? w : bodyWeightAtDate, // Показываем на красном графике либо доп.вес, либо вес тела
+                            vol: vol
+                        };
+                    }
+                });
+
+                const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a) - new Date(b));
+
+                if (sortedDates.length > 0) {
+                    labels = sortedDates.map(date => {
+                        const d = new Date(date);
+                        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                    });
+                    weightValues = sortedDates.map(date => groupedByDate[date].weight);
+                    volumeValues = sortedDates.map(date => groupedByDate[date].vol);
+                    labelText = selectedExercise;
+                }
+            }
+
+            setChartData({ labels, weights: weightValues, volumes: volumeValues });
+
+            const timer = setTimeout(() => {
+                if (canvasRef.current && (weightValues.length > 0 || volumeValues.length > 0)) {
                     const ctx = canvasRef.current.getContext('2d');
+                    if (chartInstance.current) { chartInstance.current.destroy(); }
+
+                    const datasets = [];
+                    const scales = {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                font: { size: 10, weight: 'bold' },
+                                color: '#ef4444' // Красный цвет для левой оси (Вес)
+                            },
+                            title: {
+                                display: true,
+                                text: 'КГ',
+                                color: '#ef4444',
+                                font: { size: 10, weight: 'black' }
+                            }
+                        }
+                    };
+
+                    // Добавляем основной график Веса (Красный)
+                    datasets.push({
+                        label: activeTab === 'body' ? t.weight : 'Вес (кг)',
+                        data: weightValues,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        yAxisID: 'y',
+                        tension: 0.3,
+                        pointRadius: 4
+                    });
+
+                    // Если это упражнения, добавляем второй график Объема (Черный)
+                    if (activeTab === 'exercises' && volumeValues.length > 0) {
+                        datasets.push({
+                            label: 'Всего повторов (кг*повт)',
+                            data: volumeValues,
+                            borderColor: '#0f172a',
+                            backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                            borderWidth: 2,
+                            yAxisID: 'y1', // Вторая ось Y
+                            tension: 0.3,
+                            fill: true,
+                            borderDash: [5, 5]
+                        });
+
+                        // Настройка правой оси для объема
+                        scales.y1 = {
+                            type: 'linear',
+                            position: 'right',
+                            display: true,
+                            grid: { drawOnChartArea: false },
+                            ticks: { font: { size: 10 } }
+                        };
+                    }
+
                     chartInstance.current = new Chart(ctx, {
                         type: 'line',
-                        data: {
-                            labels,
-                            datasets: [{
-                                label: labelText,
-                                data,
-                                borderColor: '#0f172a',
-                                backgroundColor: 'rgba(15, 23, 42, 0.05)',
-                                borderWidth: 3,
-                                tension: 0.4,
-                                fill: true,
-                                pointBackgroundColor: '#0f172a',
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            }]
-                        },
+                        data: { labels, datasets },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { beginAtZero: false, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                                x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-                            }
+                            plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } },
+                            scales: scales
                         }
                     });
                 }
-            }
+            }, 0);
+
+            return () => {
+                clearTimeout(timer);
+                if (chartInstance.current) chartInstance.current.destroy();
+            };
         }, [isOpen, weights, records, activeTab, selectedExercise, t]);
 
         if (!isOpen) return null;
 
         return (
             <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 modal-backdrop fade-in">
-                <div className="bg-white w-full max-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                    {/* Header */}
                     <div className="px-6 pt-6 pb-2 flex justify-between items-center border-b border-slate-50">
                         <h2 className="text-xl font-black text-slate-900 tracking-tight">{t.progress}</h2>
-                        <button onClick={onClose} className="p-2 -mr-2 text-slate-400">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <button onClick={onClose} className="p-2 -mr-2 text-slate-400"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
 
+                    {/* Tabs */}
                     <div className="px-6 pt-4">
                         <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
                             <button onClick={() => setActiveTab('body')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'body' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.bodyWeight}</button>
@@ -779,27 +866,31 @@ function App() {
                         </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col min-h-[350px]">
+                    <div className="flex-1 flex flex-col min-h-[380px]">
                         {activeTab === 'exercises' && (
                             <div className="p-6 pb-0">
-                                <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 custom-select focus:ring-2 focus:ring-slate-900 focus:outline-none">
+                                <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:outline-none appearance-none">
                                     <option value="" disabled>{t.selectExercise}</option>
                                     {knownExercises.map(ex => (<option key={ex} value={ex}>{ex}</option>))}
                                 </select>
                             </div>
                         )}
                         <div className="flex-1 relative p-6">
-                            {(activeTab === 'body' ? Object.keys(weights).filter(k => weights[k] !== '' && weights[k] !== null).length > 0 : (selectedExercise && records.some(r => r.description.trim() === selectedExercise && (r.val1 || r.val2 || r.val3)))) ? (
+                            {chartData.labels.length > 0 ? (
                                 <canvas ref={canvasRef}></canvas>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
+                                        <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                    </div>
                                     <p className="text-sm font-bold uppercase tracking-widest text-center">{t.noData}</p>
                                 </div>
                             )}
                         </div>
                     </div>
+
                     <div className="px-6 pb-6 pt-2">
-                        <button onClick={onClose} className="w-full py-3 bg-slate-100 text-slate-900 font-bold rounded-xl active:scale-95">{t.close}</button>
+                        <button onClick={onClose} className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl active:scale-95 transition-transform">{t.close}</button>
                     </div>
                 </div>
             </div>
@@ -1035,6 +1126,13 @@ function App() {
     };
     const currentUI = uiSettings[mode] || {};
 
+    const toggleStandBy = (recordId) => {
+        setRecords(prev => prev.map(r =>
+            r.id === recordId ? { ...r, isStandBy: !r.isStandBy } : r
+        ));
+        // Не забудь сохранить в IndexedDB, если используешь автосохранение
+    };
+
     return (
         <div className="App">
             <div className="min-h-screen max-w-md mx-auto flex flex-col relative pb-10 transition-colors duration-500"
@@ -1080,7 +1178,7 @@ function App() {
                     <ContentRecords mode={mode} currentRecords={currentRecords} deleteRecord={deleteRecord} updateRecord={updateRecord}
                       handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} draggedIdx={draggedIdx}
                       uiSettings={uiSettings} knownExercises={knownExercises} knownShopItems={knownShopItems} knownCookItems={knownCookItems}
-                      knownKbzhuItems={knownKbzhuItems} t={t}
+                      knownKbzhuItems={knownKbzhuItems} t={t} toggleStandBy={toggleStandBy} records={records} setRecords={setRecords}
                     />
                     <FooterButtons mode={mode} t={t} currentRecords={currentRecords} viewDate={viewDate} language={language}
                       setRecords={setRecords} viewDateKey={viewDateKey} shopListName={shopListName} showToast={showToast}

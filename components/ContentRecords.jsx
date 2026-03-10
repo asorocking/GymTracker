@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownItems, t }) => {
+const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOver, onDragEnd, isDragging, uiSettings, mode, knownItems, t, toggleStandBy }) => {
     const [isConfirming, setIsConfirming] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -96,8 +96,17 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
     const formattedTime = record.createdAt ? new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
 
     return (
-        <div draggable={mode !== 'cook' && mode !== 'kbzhu'} onDragStart={mode !== 'cook' && mode !== 'kbzhu' ? (e) => onDragStart(e, index) : null} onDragOver={mode !== 'cook' && mode !== 'kbzhu' ? (e) => onDragOver(e, index) : null} onDragEnd={mode !== 'cook' && mode !== 'kbzhu' ? onDragEnd : null} style={itemStyles} onClick={toggleExpanded} className={`rounded-lg px-0.5 flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 self-center ${isDragging ? 'dragging' : ''}`}>
-            <div className="flex items-center w-full" style={{ height: `${uiSettings.itemHeight}px` }}>
+        <div draggable={mode !== 'cook' && mode !== 'kbzhu'}
+             onDragStart={mode !== 'cook' && mode !== 'kbzhu' ? (e) => onDragStart(e, index) : null}
+             onDragOver={mode !== 'cook' && mode !== 'kbzhu' ? (e) => onDragOver(e, index) : null}
+             onDragEnd={mode !== 'cook' && mode !== 'kbzhu' ? onDragEnd : null}
+             style={itemStyles}
+             onClick={toggleExpanded}
+             className={`rounded-lg flex flex-col shadow-sm fade-in tracker-item transition-all duration-200 self-center 
+                ${isDragging ? 'dragging' : ''}
+            `}
+        >
+            <div className={`flex items-center w-full rounded-lg ${record.isStandBy ? 'bg-red-100 border border-red-100' : 'bg-white'}`} style={{ height: `${uiSettings.itemHeight}px` }}>
                 {mode !== 'cook' && mode !== 'kbzhu' ? (
                     <div className="flex items-center drag-handle px-0.5 shrink-0 h-full" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-0.5 opacity-20">
@@ -112,7 +121,8 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                     <div className="shrink-0 w-1"></div>
                 )}
 
-                <div className="flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5 flex" onClick={(e) => e.stopPropagation()}>
+                <div className={`flex-col items-center gap-0.5 shrink-0 px-0.5 py-0.5 flex`}
+                    onClick={(e) => e.stopPropagation()}>
                     {(mode === 'gym') && (
                         <button onClick={() => onUpdate(record.id, 'isHighlighted', !record.isHighlighted)} className={`p-0.5 transition-all active:scale-90 ${record.isHighlighted ? 'text-slate-700' : 'text-slate-300'}`}>
                             <svg className="w-3.5 h-3.5" fill={record.isHighlighted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="4" /></svg>
@@ -211,9 +221,20 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                         {['val1', 'val2', 'val3'].map((f) => (<input key={f} type="text" inputMode="numeric" value={record[f] || ''} onChange={(e) => onUpdate(record.id, f, e.target.value.replace(/\D/g, '').slice(0, 3))} className={`w-6 h-6 text-center border border-slate-100 rounded-md text-[11px] font-bold focus:outline-none focus:border-slate-400 bg-slate-50/50 shadow-inner p-0 ${record.isHighlighted || record.isCompleted ? 'text-black' : 'text-slate-900'}`} placeholder="0" />))}
                     </div>
                 )}
-                <button onClick={handleDeleteClick} className={`w-7 h-7 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-900'}`}>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                </button>
+                <div className="flex flex-col items-center">
+                    <button
+                        onClick={() => toggleStandBy(record.id)}
+                        className={`w-4 h-4 rounded-sm transition-all active:scale-95`}
+                    >
+                        <svg className="w-3 h-3 stroke-red-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2v10" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M18.36 6.64a9 9 0 11-12.72 0" />
+                        </svg>
+                    </button>
+                    <button onClick={handleDeleteClick} className={`w-7 h-7 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-900'}`}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </div>
             </div>
             {mode === 'cook' && (
                 <div className={`expanded-content px-2 ${isExpanded ? 'show' : ''}`} onClick={(e) => e.stopPropagation()}>
@@ -245,6 +266,7 @@ const ContentRecords = (props) => {
                             props.mode === 'cook' ? props.knownCookItems :
                                 props.mode === 'kbzhu' ? props.knownKbzhuItems : []}
                     t={props.t}
+                    toggleStandBy={props.toggleStandBy}
                 />
                 ))
             }
