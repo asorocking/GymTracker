@@ -92,7 +92,7 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
         itemStyles.backgroundColor = uiSettings.highlightColor;
         itemStyles.borderColor = '#cbd5e1';
     }
-
+    console.log(itemStyles);
     const formattedTime = record.createdAt ? new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
 
     return (
@@ -106,7 +106,7 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                 ${isDragging ? 'dragging' : ''}
             `}
         >
-            <div className={`flex items-center w-full rounded-lg ${record.isStandBy ? 'bg-red-100 border border-red-100' : 'bg-white'}`} style={{ height: `${uiSettings.itemHeight}px` }}>
+            <div className={`flex items-center w-full rounded-lg ${record.isStandBy ? 'bg-red-100 border border-red-100' : ''}`} style={{ height: `${uiSettings.itemHeight}px` }}>
                 {mode !== 'cook' && mode !== 'kbzhu' ? (
                     <div className="flex items-center drag-handle px-0.5 shrink-0 h-full" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-0.5 opacity-20">
@@ -129,7 +129,8 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                         </button>
                     )}
                     {mode !== 'pressure' && mode !== 'cook' && (
-                        <button onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)} className={`transition-all active:scale-90 ${mode === 'shop' ? 'p-1.5' : 'p-0.5'} ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}>
+                        <button onClick={() => onUpdate(record.id, 'isCompleted', !record.isCompleted)}
+                                className={`transition-all active:scale-90 ${mode === 'shop' ? 'p-1.5' : 'p-0.5'} ${record.isCompleted ? 'text-emerald-600' : 'text-slate-300'}`}>
                             <svg className={mode === 'shop' ? "w-5 h-5" : "w-3.5 h-3.5"} fill={record.isCompleted ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M5 13l4 4L19 7" /></svg>
                         </button>
                     )}
@@ -222,15 +223,17 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
                     </div>
                 )}
                 <div className="flex flex-col items-center">
-                    <button
-                        onClick={() => toggleStandBy(record.id)}
-                        className={`w-4 h-4 rounded-sm transition-all active:scale-95`}
-                    >
-                        <svg className="w-3 h-3 stroke-red-500 mx-auto" fill="none" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2v10" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M18.36 6.64a9 9 0 11-12.72 0" />
-                        </svg>
-                    </button>
+                    {mode === 'gym' && (
+                        <button
+                            onClick={() => toggleStandBy(record.id)}
+                            className={`w-4 h-4 rounded-sm transition-all active:scale-95`}
+                        >
+                            <svg className="w-3 h-3 stroke-red-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2v10" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M18.36 6.64a9 9 0 11-12.72 0" />
+                            </svg>
+                        </button>
+                    )}
                     <button onClick={handleDeleteClick} className={`w-7 h-7 shrink-0 flex items-center justify-center transition-all ${isConfirming ? 'delete-btn-active' : 'text-slate-900'}`}>
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
