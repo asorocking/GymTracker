@@ -92,7 +92,6 @@ const TrackerItem = ({ record, index, onDelete, onUpdate, onDragStart, onDragOve
         itemStyles.backgroundColor = uiSettings.highlightColor;
         itemStyles.borderColor = '#cbd5e1';
     }
-    console.log(itemStyles);
     const formattedTime = record.createdAt ? new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
 
     return (

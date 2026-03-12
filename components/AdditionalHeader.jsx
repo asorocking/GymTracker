@@ -7,7 +7,7 @@ const AdditionalHeader = (props) => {
 
     return (
         <div className="px-4 pb-1">
-            <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm min-h-[40px]">
+            <div className="flex items-center justify-between bg-white/60 rounded-xl p-0.5 border border-slate-200/50 shadow-sm min-h-[25px]">
                 {props.mode === 'gym' || props.mode === 'pressure' ? (
                     <React.Fragment>
                         <div className="w-10 flex justify-center"><button onClick={() => props.changeDate(-1)} className="nav-btn shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg></button></div>
@@ -20,16 +20,16 @@ const AdditionalHeader = (props) => {
                              className="flex flex-col items-center justify-center cursor-pointer px-1 shrink-0 min-w-[80px] hover:bg-slate-100
                                 rounded-lg active:scale-95 transition-all"
                         >
-                            <span className={`text-[10px] font-black text-slate-900 tabular-nums leading-none whitespace-nowrap mb-0.5
+                            <span className={`text-[10px] font-black text-slate-900 tabular-nums leading-none whitespace-nowrap 
                                               ${currentDate === selectedDate ? 'text-orange-500' : props.sP ? 'text-slate-400' : 'text-slate-600'}`}>
                                 {props.displayDate}
                             </span>
                             {props.currentSessionDuration && props.mode === 'gym' && (
-                                <div className="flex flex-col items-center gap-0">
-                                    <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">
+                                <div className="flex items-center gap-2 text-[8px]">
+                                    <span className="font-black text-slate-400 uppercase tracking-widest leading-none">
                                         {props.t.workoutTime}
                                     </span>
-                                    <span className={`text-[10px] font-black tabular-nums leading-none ${props.sP ? 'text-slate-400' : 'text-slate-600'}`}>
+                                    <span className={`font-black tabular-nums ${props.sP ? 'text-slate-400' : 'text-slate-600'}`}>
                                         {props.currentSessionDuration}
                                     </span>
                                 </div>
