@@ -692,9 +692,10 @@ function App() {
             let labelText = '';
 
             const parseNum = (val) => {
-                if (!val) return 0;
+                if (val === null || val === undefined || val === '') return 0;
                 const normalized = typeof val === 'string' ? val.replace(',', '.') : val;
-                return parseFloat(normalized) || 0;
+                const result = parseFloat(normalized);
+                return isNaN(result) ? 0 : result; // Гарантируем, что всегда вернется число
             };
 
             if (activeTab === 'body') {
@@ -721,7 +722,7 @@ function App() {
 
                 exerciseRecords.forEach(r => {
                     const actualDate = r.dateKey || r.date;
-                    if (!actualDate) return;
+                    if (!actualDate || actualDate === "undefined") return; // Пропускаем битые записи
 
                     const w = parseNum(r.weight); // Дополнительный вес (блин на поясе)
                     const reps = parseNum(r.val1) + parseNum(r.val2) + parseNum(r.val3);
