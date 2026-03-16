@@ -31,6 +31,8 @@ function App() {
             progress: "Статистика",
             bodyWeight: "Вес тела",
             exerciseStats: "Упражнения",
+            averageWeightChange: "Сред. изменение веса за 2 недели",
+            zeroWeightValuesWereDetected: "За последние две недели есть нулевые значения веса. Пожалуйста, исправьте.",
             selectExercise: "Выбрать упражнение",
             noData: "Недостаточно данных",
             close: "Закрыть",
@@ -145,6 +147,8 @@ function App() {
             progress: "Statistics",
             bodyWeight: "Body Weight",
             exerciseStats: "Exercises",
+            averageWeightChange: "Average weight changing for 2 weeks",
+            zeroWeightValuesWereDetected: "Zero weight values were detected for last two weeks. Please, fix it!",
             selectExercise: "Select exercise",
             noData: "Not enough data",
             close: "Close",
@@ -671,7 +675,12 @@ function App() {
         const [activeTab, setActiveTab] = useState('body');
         const [selectedExercise, setSelectedExercise] = useState('');
         // Стейт теперь хранит объект с массивами для веса и объема
-        const [chartData, setChartData] = useState({ labels: [], weights: [], volumes: [] });
+        const [chartData, setChartData] = useState({
+            labels: [],
+            weights: [],
+            volumes: [],
+            averageWeightChangeResult: []
+        });
 
         const canvasRef = useRef(null);
         const chartInstance = useRef(null);
@@ -683,13 +692,14 @@ function App() {
             }
         }, [knownExercises, selectedExercise]);
 
-        useEffect(() => {
+        useEffect(callbackfn => {
             if (!isOpen) return;
 
             let labels = [];
             let weightValues = [];
             let volumeValues = [];
             let labelText = '';
+            let averageWeightChangeResult = [];
 
             const parseNum = (val) => {
                 if (val === null || val === undefined || val === '') return 0;
@@ -761,9 +771,92 @@ function App() {
                     volumeValues = sortedDates.map(date => groupedByDate[date].vol);
                     labelText = selectedExercise;
                 }
+            }  else if (activeTab === 'averageWeightChange') {
+                const sortedEntries = Object.entries(weights)
+                    .filter(([_, val]) => val !== '' && val !== null)
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+                if (sortedEntries.length > 0) {
+                    labels = sortedEntries.map(([date]) => {
+                        const d = new Date(date);
+                        return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+                    });
+                    weightValues = sortedEntries.map(([_, val]) => parseNum(val));
+
+                    const zeroValuesWeight = weightValues.filter(r => r === 0);
+                    if (zeroValuesWeight.length === 0) {
+                        let result = weightValues.slice(0, 7).reduce((acc, curr) => {
+                            acc.sum += curr;
+                            acc.explanation += `${curr} + `;
+                            return acc;
+                        }, {sum: 0, explanation: ''});
+                        const weekBeforeLastAverageWeight = result.sum / 7;
+                        const weekBeforeLastAverageWeightResult = `${result.explanation.slice(0, -2)} (= ${(result.sum / 7).toFixed(2)})`;
+
+                        result = weightValues.slice(7, 14).reduce((acc, curr) => {
+                            acc.sum += curr;
+                            acc.explanation += `${curr} + `;
+                            return acc;
+                        }, {sum: 0, explanation: ''});
+                        const lastWeekAverageWeight = result.sum / 7;
+                        const lastWeekAverageWeightResult = `${result.explanation.slice(0, -2)} (= ${(result.sum / 7).toFixed(2)})`;
+
+                        const averageWeightChangeValue = [];
+                        averageWeightChangeValue['weight'] =
+                            weekBeforeLastAverageWeight - lastWeekAverageWeight;
+                        averageWeightChangeResult['explanation'] = `${weekBeforeLastAverageWeightResult}  -  ${lastWeekAverageWeightResult}  =  ${averageWeightChangeValue['weight'].toFixed(2)}`;
+
+                        if (averageWeightChangeValue['weight'] < 0) {
+                            averageWeightChangeResult['result'] =
+                                `Вы сбросили ${Math.abs(averageWeightChangeValue['weight']).toFixed(2)} кг.`;
+                        }
+                        if (averageWeightChangeValue['weight'] > 0) {
+                            averageWeightChangeResult['result'] =
+                                `Вы набрали ${Math.abs(averageWeightChangeValue['weight']).toFixed(2)} кг.`;
+                        }
+                        if (averageWeightChangeValue['weight'] === 0) {
+                            averageWeightChangeResult['result'] = `Ваш вес не изменился`;
+                        }
+                    } else {
+                        averageWeightChangeResult['result'] = t.zeroWeightValuesWereDetected;
+                    }
+//--------------------------------
+                    // 1. Получаем только числа веса, отсортированные от новых к старым
+                    const weightValuesOnly = Object.entries(weights)
+                        .filter(([_, val]) => val !== '' && val !== null)
+                        .sort((a, b) => new Date(b[0]) - new Date(a[0])) // от новых к старым
+                        .map(([_, val]) => parseNum(val));
+
+                    // 2. Считаем динамику
+                    const dynamics = weightValuesOnly.reduce((acc, _, ind, arr) => {
+                        if (ind + 14 <= arr.length) {
+                            const week1 = arr.slice(ind, ind + 7).reduce((s, v) => s + v, 0) / 7;
+                            const week2 = arr.slice(ind + 7, ind + 14).reduce((s, v) => s + v, 0) / 7;
+                            acc.push(Number((week1 - week2).toFixed(2)));
+                        }
+                        return acc;
+                    }, []);
+
+                    // 3. Подготавливаем метки дат (берем даты первых 7-дневок)
+                    const dynamicLabels = Object.entries(weights)
+                        .filter(([_, val]) => val !== '' && val !== null)
+                        .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                        .slice(0, dynamics.length) // столько же, сколько результатов
+                        .map(([date]) => {
+                            const d = new Date(date);
+                            return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                        });
+
+                    // Разворачиваем обратно для графика (чтобы время шло слева направо)
+                    labels = dynamicLabels.reverse();
+                    weightValues = dynamics.reverse();
+//--------------------------------
+//                     labels.reverse();
+//                     weightValues.reverse();
+                }
             }
 
-            setChartData({ labels, weights: weightValues, volumes: volumeValues });
+            setChartData({ labels, weights: weightValues, volumes: volumeValues, averageWeightChangeResult });
 
             const timer = setTimeout(() => {
                 if (canvasRef.current && (weightValues.length > 0 || volumeValues.length > 0)) {
@@ -861,9 +954,18 @@ function App() {
 
                     {/* Tabs */}
                     <div className="px-6 pt-4">
-                        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-                            <button onClick={() => setActiveTab('body')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'body' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.bodyWeight}</button>
-                            <button onClick={() => setActiveTab('exercises')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'exercises' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.exerciseStats}</button>
+                        <div className="bg-slate-100 p-1 rounded-xl">
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => setActiveTab('body')}
+                                        className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'body' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.bodyWeight}</button>
+                                <button onClick={() => setActiveTab('exercises')} className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${activeTab === 'exercises' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}>{t.exerciseStats}</button>
+                            </div>
+                            <button onClick={() => setActiveTab('averageWeightChange')}
+                                    className={`w-full py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all mt-1
+                                ${activeTab === 'averageWeightChange' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+                            >
+                                {t.averageWeightChange}
+                            </button>
                         </div>
                     </div>
 
@@ -876,18 +978,30 @@ function App() {
                                 </select>
                             </div>
                         )}
-                        <div className="flex-1 relative p-6">
-                            {chartData.labels.length > 0 ? (
-                                <canvas ref={canvasRef}></canvas>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
-                                    <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
-                                        <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                    </div>
-                                    <p className="text-sm font-bold uppercase tracking-widest text-center">{t.noData}</p>
+                        {activeTab === "averageWeightChange" && (
+                            <div className="max-w-[500px] h-full flex flex-col mt-10 mx-10 text-slate-300 gap-4">
+                                <div className="block items-center justify-center">
+                                    {chartData.averageWeightChangeResult['explanation']}
                                 </div>
-                            )}
-                        </div>
+                                <div className="block items-center justify-center">
+                                    {chartData.averageWeightChangeResult['result']}
+                                </div>
+                            </div>
+                        )}
+                        {activeTab && (
+                            <div className="flex-1 relative p-6">
+                                {chartData.labels.length > 0 ? (
+                                    <canvas ref={canvasRef}></canvas>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                                        <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
+                                            <svg className="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                        </div>
+                                        <p className="text-sm font-bold uppercase tracking-widest text-center">{t.noData}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="px-6 pb-6 pt-2">
