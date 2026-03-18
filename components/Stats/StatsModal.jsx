@@ -114,7 +114,7 @@ const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) =>
 
                 const zeroValuesWeight = weightValues.filter(r => r === 0);
                 if (zeroValuesWeight.length === 0) {
-                    let result = weightValues.slice(0, 7).reduce((acc, curr) => {
+                    let result = weightValues.slice(7, 14).reverse().reduce((acc, curr) => {
                         acc.sum += curr;
                         acc.explanation += `${curr} + `;
                         return acc;
@@ -122,7 +122,7 @@ const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) =>
                     const weekBeforeLastAverageWeight = result.sum / 7;
                     const weekBeforeLastAverageWeightResult = `${result.explanation.slice(0, -2)} (= ${(result.sum / 7).toFixed(2)})`;
 
-                    result = weightValues.slice(7, 14).reduce((acc, curr) => {
+                    result = weightValues.slice(0, 7).reverse().reduce((acc, curr) => {
                         acc.sum += curr;
                         acc.explanation += `${curr} + `;
                         return acc;
