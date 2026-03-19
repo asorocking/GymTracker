@@ -136,8 +136,8 @@ const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) =>
 
                     const averageWeightChangeValue = [];
                     averageWeightChangeValue['weight'] =
-                        weekBeforeLastAverageWeight - lastWeekAverageWeight;
-                    averageWeightChangeResult['explanation'] = `${weekBeforeLastAverageWeightResult}  -  ${lastWeekAverageWeightResult}  =  ${averageWeightChangeValue['weight'].toFixed(2)}`;
+                        lastWeekAverageWeight - weekBeforeLastAverageWeight;
+                    averageWeightChangeResult['explanation'] = `${lastWeekAverageWeightResult}  -  ${weekBeforeLastAverageWeightResult}  =  ${averageWeightChangeValue['weight'].toFixed(2)}`;
 
                     if (averageWeightChangeValue['weight'] < 0) {
                         averageWeightChangeResult['result'] =
@@ -163,8 +163,16 @@ const StatsModal = ({ isOpen, onClose, weights, records, knownExercises, t }) =>
                 // 2. Считаем динамику
                 const dynamics = weightValuesOnly.reduce((acc, _, ind, arr) => {
                     if (ind + 14 <= arr.length) {
-                        const week1 = arr.slice(ind, ind + 7).reduce((s, v) => s + v, 0) / 7;
-                        const week2 = arr.slice(ind + 7, ind + 14).reduce((s, v) => s + v, 0) / 7;
+                        const week2 = arr.slice(ind + 7, ind + 14).reduce((s, v) => {
+                            console.log(v);
+                            return s + v;
+                        }, 0) / 7;
+
+                        const week1 = arr.slice(ind, ind + 7).reduce((s, v) => {
+                            console.log(v);
+                            return s + v;
+                        }, 0) / 7;
+
                         acc.push(Number((week1 - week2).toFixed(2)));
                     }
                     return acc;
